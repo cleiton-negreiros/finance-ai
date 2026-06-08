@@ -190,9 +190,35 @@ git pull
 
 ## Deploy (Netlify)
 
-O frontend pode ser deployado no Netlify como site estático.
-O backend precisa de um servidor Node (Heroku, Railway, Render, etc)
-Ou roda totalmente local.
+Frontend: https://finance-ai-799.netlify.app
+
+### Deploy Automático (GitHub Actions)
+- Push na branch `main` faz deploy automático no Netlify
+- Workflow em `.github/workflows/deploy-netlify.yml`
+- Secrets necessários no GitHub:
+  - `NETLIFY_AUTH_TOKEN`: Token de acesso pessoal
+  - `NETLIFY_SITE_ID`: ID do site no Netlify
+
+### Deploy Manual
+```bash
+npx netlify-cli deploy --dir=frontend --prod
+```
+
+### Como funciona
+- Frontend é estático (HTML/CSS/JS) servido pelo Netlify
+- Quando acessado do Netlify, o frontend tenta conectar em `localhost:3000`
+- Backend precisa estar rodando localmente para funcionalidade completa
+- Ideal: frontend no Netlify + backend em Railway/Render
+
+### GitHub
+Repositório: https://github.com/cleiton-negreiros/finance-ai
+
+### Docker
+```bash
+docker-compose up -d
+docker build -t finance-ai .
+docker run -p 3000:3000 finance-ai
+```
 
 ## Extensões Futuras
 

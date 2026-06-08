@@ -134,6 +134,8 @@ Para usar em outro PC/IA:
 4. Acessar http://localhost:3000
 
 Para deploy:
-- Frontend: Netlify (estático, pasta frontend/)
-- Backend: Railway, Render, Fly.io (Node)
-- Local: Docker (ver docker-compose.yml)
+- Frontend: Netlify (https://finance-ai-799.netlify.app)
+- CI/CD: GitHub Actions (push na main deploya automaticamente)
+- Backend: Railway, Render, Fly.io (Node) ou local
+- Docker: `docker-compose up -d`
+- Git: https://github.com/cleiton-negreiros/finance-ai
