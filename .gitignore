@@ -2,6 +2,8 @@ node_modules/
 backend/uploads/*
 !backend/uploads/.gitkeep
 database/finance.db
+database/finance.db-shm
+database/finance.db-wal
 *.log
 .env
 .DS_Store
