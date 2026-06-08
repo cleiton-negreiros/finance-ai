@@ -166,6 +166,9 @@ function escapeHtml(str) {
 
 /* ===== DASHBOARD ===== */
 
+const ACCOUNT_COLORS = ['#7c5cff','#22c55e','#3b82f6','#eab308','#ec4899','#14b8a6','#f97316','#a855f7','#ef4444','#6b7280'];
+const CAT_COLORS = ['#7c5cff','#22c55e','#ef4444','#eab308','#3b82f6','#ec4899','#14b8a6','#f97316','#a855f7','#6b7280'];
+
 async function initDashboard() {
   const refreshBtn = document.getElementById('refreshDashboard');
   refreshBtn.addEventListener('click', loadDashboard);
@@ -177,7 +180,8 @@ async function loadDashboard() {
     const response = await fetch(API_BASE + '/dashboard');
     const data = await response.json();
 
-    renderResumo(data);
+    renderHero(data);
+    renderKPIs(data);
     renderContas(data.saldo_por_conta);
     renderCategorias(data.percentual_por_categoria);
 
@@ -189,34 +193,60 @@ async function loadDashboard() {
   }
 }
 
-function renderResumo(data) {
-  const saldoEl = document.getElementById('dashSaldo');
-  if (saldoEl) {
-    saldoEl.textContent = formatCurrency(data.saldo_total);
-    saldoEl.style.color = data.saldo_total >= 0 ? '#4caf50' : '#f44336';
+function renderHero(data) {
+  const saldo = data.saldo_total || 0;
+  const heroSaldo = document.getElementById('heroSaldo');
+  const heroChange = document.getElementById('heroChange');
+
+  if (heroSaldo) {
+    heroSaldo.textContent = formatCurrency(saldo);
+    heroSaldo.style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
   }
-  setText('dashEntradas', formatCurrency(data.total_entrada));
-  setText('dashSaidas', formatCurrency(data.total_saida));
-  setText('dashInvestido', formatCurrency(data.total_investido));
+
+  if (heroChange) {
+    if (data.total_entrada > 0 && data.total_saida > 0) {
+      const ratio = ((data.total_entrada - data.total_saida) / (data.total_entrada + data.total_saida) * 100).toFixed(1);
+      const isPos = ratio >= 0;
+      heroChange.textContent = `${isPos ? '+' : ''}${ratio}% de margem`;
+      heroChange.className = 'hero-change ' + (isPos ? 'positive' : 'negative');
+    } else {
+      heroChange.textContent = 'Sem dados suficientes';
+      heroChange.className = 'hero-change';
+    }
+  }
+}
+
+function renderKPIs(data) {
+  setText('kpiEntradas', formatCurrency(data.total_entrada));
+  setText('kpiSaidas', formatCurrency(data.total_saida));
+  setText('kpiInvestido', formatCurrency(data.total_investido));
 }
 
 function renderContas(contas) {
-  const tbody = document.getElementById('contasBody');
-  if (!tbody) return;
+  const grid = document.getElementById('accountsGrid');
+  if (!grid) return;
 
   if (!contas || !contas.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading">Nenhuma conta</td></tr>';
+    grid.innerHTML = '<div class="account-card"><p class="loading">Nenhuma conta</p></div>';
     return;
   }
 
-  tbody.innerHTML = contas.map(c => {
-    const saldoClass = c.saldo_calculado >= 0 ? 'valor-entrada' : 'valor-gasto';
-    return `<tr>
-      <td data-label="Conta">${escapeHtml(c.nome)}</td>
-      <td data-label="Tipo">${capitalize(c.tipo)}</td>
-      <td data-label="Saldo" class="${saldoClass}">${formatCurrency(c.saldo_calculado)}</td>
-      <td data-label="Transacoes">${c.qtd_transacoes}</td>
-    </tr>`;
+  grid.innerHTML = contas.map((c, i) => {
+    const cor = ACCOUNT_COLORS[i % ACCOUNT_COLORS.length];
+    const saldoClass = c.saldo_calculado >= 0 ? '' : '';
+    return `<div class="account-card">
+      <div class="account-header">
+        <span class="account-dot" style="background:${cor}"></span>
+        <div>
+          <div class="account-name">${escapeHtml(c.nome)}</div>
+          <div class="account-type">${capitalize(c.tipo)}</div>
+        </div>
+      </div>
+      <div class="account-balance" style="color:${c.saldo_calculado >= 0 ? 'var(--green)' : 'var(--red)'}">
+        ${formatCurrency(c.saldo_calculado)}
+      </div>
+      <div class="account-txcount">${c.qtd_transacoes} transacoes</div>
+    </div>`;
   }).join('');
 }
 
@@ -232,11 +262,15 @@ function renderCategorias(categorias) {
   const total = categorias.reduce((acc, c) => acc + c.valor, 0);
 
   tbody.innerHTML = categorias.map(c => {
-    const pct = total > 0 ? ((c.valor / total) * 100).toFixed(1) : 0;
+    const pct = total > 0 ? ((c.valor / total) * 100) : 0;
+    const cor = CAT_COLORS[categorias.indexOf(c) % CAT_COLORS.length];
     return `<tr>
-      <td data-label="Categoria">${capitalize(c.categoria)}</td>
-      <td data-label="Valor">${formatCurrency(c.valor)}</td>
-      <td data-label="%">${pct}%</td>
+      <td class="cat-name">${capitalize(c.categoria)}</td>
+      <td class="cat-value">${formatCurrency(c.valor)}</td>
+      <td class="cat-pct">
+        ${pct.toFixed(1)}%
+        <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.min(pct, 100)}%;background:${cor}"></div></div>
+      </td>
     </tr>`;
   }).join('');
 }

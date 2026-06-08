@@ -10,75 +10,82 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="apple-touch-icon" href="/icons/icon-512.svg">
-  <title>Finance AI</title>
+  <title>Finance AI — Upload</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Finance AI</h1>
-      <p class="subtitle">Consolidacao Financeira Local</p>
-      <nav class="nav-bar">
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">$</div>
+        <div>
+          <div class="header-title">Finance AI</div>
+          <div class="header-sub">Importar Transacoes</div>
+        </div>
+      </div>
+      <nav class="header-nav">
         <a href="/" class="nav-link active">Upload</a>
         <a href="/dashboard.html" class="nav-link">Dashboard</a>
       </nav>
     </header>
 
-    <div id="apiWarning" class="card warning-card" style="display:none">
-      <p>Rodando do Netlify - Para funcionalidade completa, inicie o backend local:</p>
+    <div id="apiWarning" class="warning-card" style="display:none">
+      <p>Rodando do Netlify — Para funcionalidade completa, inicie o backend local:</p>
       <code>npm start</code>
       <p>ou acesse <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></p>
     </div>
 
-    <section class="card upload-card">
-      <h2>Upload de Transacoes</h2>
-      <form id="uploadForm">
-        <div class="form-group">
-          <label for="fonteSelect">Fonte:</label>
-          <select id="fonteSelect" required>
-            <option value="">Selecione...</option>
-            <option value="c6">C6 Bank</option>
-            <option value="mercadopago">Mercado Pago</option>
-            <option value="binance">Binance</option>
-            <option value="rico">Rico</option>
-            <option value="nomad">Nomad</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="fileInput">Arquivo CSV:</label>
-          <input type="file" id="fileInput" accept=".csv" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Upload</button>
-      </form>
-      <div id="uploadStatus" class="status"></div>
-    </section>
+    <div class="upload-layout">
+      <section class="card upload-form">
+        <h3>Upload de CSV</h3>
+        <form id="uploadForm">
+          <div class="form-group">
+            <label for="fonteSelect">Fonte</label>
+            <select id="fonteSelect" required>
+              <option value="">Selecione...</option>
+              <option value="c6">C6 Bank</option>
+              <option value="mercadopago">Mercado Pago</option>
+              <option value="binance">Binance</option>
+              <option value="rico">Rico</option>
+              <option value="nomad">Nomad</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fileInput">Arquivo CSV</label>
+            <input type="file" id="fileInput" accept=".csv" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Importar</button>
+        </form>
+        <div id="uploadStatus" class="status"></div>
+      </section>
 
-    <section class="card resumo-card">
-      <h2>Resumo Financeiro</h2>
-      <div id="resumoContainer" class="resumo-grid">
-        <div class="resumo-item entradas">
-          <span class="resumo-label">Entradas</span>
-          <span id="totalEntradas" class="resumo-valor">R$ 0,00</span>
+      <section class="card">
+        <h3>Resumo Rapido</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Entradas</div>
+            <div class="kpi-value green" id="totalEntradas">R$ 0,00</div>
+          </div>
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Gastos</div>
+            <div class="kpi-value red" id="totalGastos">R$ 0,00</div>
+          </div>
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Saldo</div>
+            <div class="kpi-value" id="saldoTotal">R$ 0,00</div>
+          </div>
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Investido</div>
+            <div class="kpi-value accent" id="totalInvestimentos">R$ 0,00</div>
+          </div>
         </div>
-        <div class="resumo-item gastos">
-          <span class="resumo-label">Gastos</span>
-          <span id="totalGastos" class="resumo-valor">R$ 0,00</span>
-        </div>
-        <div class="resumo-item saldo">
-          <span class="resumo-label">Saldo</span>
-          <span id="saldoTotal" class="resumo-valor">R$ 0,00</span>
-        </div>
-        <div class="resumo-item investimentos">
-          <span class="resumo-label">Investimentos</span>
-          <span id="totalInvestimentos" class="resumo-valor">R$ 0,00</span>
-        </div>
-      </div>
-    </section>
+      </section>
+    </div>
 
-    <section class="card transacoes-card">
+    <section class="card">
       <div class="transacoes-header">
-        <h2>Transacoes</h2>
-        <button id="refreshBtn" class="btn btn-secondary">Atualizar</button>
+        <h3>Ultimas Transacoes</h3>
+        <button id="refreshBtn" class="btn btn-ghost btn-sm">Atualizar</button>
       </div>
       <div class="table-wrapper">
         <table id="transacoesTable">
@@ -95,9 +102,7 @@
             </tr>
           </thead>
           <tbody id="transacoesBody">
-            <tr>
-              <td colspan="8" class="loading">Carregando...</td>
-            </tr>
+            <tr><td colspan="8" class="loading">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -105,10 +110,6 @@
   </div>
 
   <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
-  </script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

@@ -1,71 +1,120 @@
 let charts = {};
 
+const COLORS = ['#7c5cff','#22c55e','#ef4444','#eab308','#3b82f6','#ec4899','#14b8a6','#f97316','#a855f7','#6b7280'];
+
 export function renderCharts(data) {
-  renderCategoriaPizza(data.percentual_por_categoria);
-  renderFluxoMensal(data.fluxo_mensal);
-  renderMetas(data);
+  renderDonut(data.percentual_por_categoria);
+  renderFlow(data.fluxo_mensal, data);
+  renderGoals(data);
 }
 
-function destroyChart(key) {
-  if (charts[key]) {
-    charts[key].destroy();
-    delete charts[key];
-  }
+function destroy(key) {
+  if (charts[key]) { charts[key].destroy(); delete charts[key]; }
 }
 
-function renderCategoriaPizza(categorias) {
-  destroyChart('categoriaPizza');
-
-  const ctx = document.getElementById('chartCategorias').getContext('2d');
-  const cores = [
-    '#7c5cfc', '#f44336', '#4caf50', '#ff9800', '#2196f3',
-    '#9c27b0', '#00bcd4', '#ffeb3b', '#e91e63', '#607d8b',
-  ];
-
-  charts.categoriaPizza = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: categorias.map(c => c.categoria),
-      datasets: [{
-        data: categorias.map(c => c.valor),
-        backgroundColor: categorias.map((_, i) => cores[i % cores.length]),
-        borderWidth: 0,
-      }],
+const donutOpts = {
+  responsive: true,
+  maintainAspectRatio: true,
+  cutout: '70%',
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        color: '#6b7280',
+        padding: 14,
+        font: { family: 'Inter, sans-serif', size: 11, weight: '500' },
+        usePointStyle: true,
+        pointStyleWidth: 8,
+      },
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#a0a0b0',
-            padding: 12,
-            font: { size: 11 },
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const val = ctx.raw;
-              return ` R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-            },
-          },
+    tooltip: {
+      backgroundColor: '#151d28',
+      titleFont: { family: 'Inter, sans-serif', size: 12 },
+      bodyFont: { family: 'Inter, sans-serif', size: 12 },
+      padding: 12,
+      cornerRadius: 8,
+      displayColors: true,
+      callbacks: {
+        label: (ctx) => {
+          const v = ctx.raw;
+          return ` R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         },
       },
     },
+  },
+};
+
+function renderDonut(categorias) {
+  destroy('donut');
+  const el = document.getElementById('chartCategorias');
+  if (!el || !categorias || !categorias.length) return;
+
+  charts.donut = new Chart(el.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: categorias.map(c => c.categoria.charAt(0).toUpperCase() + c.categoria.slice(1)),
+      datasets: [{
+        data: categorias.map(c => c.valor),
+        backgroundColor: categorias.map((_, i) => COLORS[i % COLORS.length]),
+        borderWidth: 0,
+        hoverOffset: 6,
+      }],
+    },
+    options: donutOpts,
   });
 }
 
-function renderFluxoMensal(fluxo) {
-  destroyChart('fluxoMensal');
+const flowOpts = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: {
+      position: 'top',
+      align: 'end',
+      labels: {
+        color: '#6b7280',
+        font: { family: 'Inter, sans-serif', size: 11 },
+        usePointStyle: true,
+        padding: 16,
+      },
+    },
+    tooltip: {
+      backgroundColor: '#151d28',
+      titleFont: { family: 'Inter, sans-serif', size: 12 },
+      bodyFont: { family: 'Inter, sans-serif', size: 12 },
+      padding: 12,
+      cornerRadius: 8,
+      callbacks: {
+        label: (ctx) => ` ${ctx.dataset.label}: R$ ${ctx.raw.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      ticks: { color: '#4b5563', font: { family: 'Inter, sans-serif', size: 10 } },
+      grid: { display: false },
+    },
+    y: {
+      ticks: {
+        color: '#4b5563',
+        font: { family: 'Inter, sans-serif', size: 10 },
+        callback: (v) => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v,
+      },
+      grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+    },
+  },
+};
 
-  const ctx = document.getElementById('chartFluxo').getContext('2d');
+function renderFlow(fluxo) {
+  destroy('flow');
+  const el = document.getElementById('chartFluxo');
+  if (!el || !fluxo || !fluxo.length) return;
+
   const meses = fluxo.map(f => f.mes).reverse();
   const entradas = fluxo.map(f => f.entradas).reverse();
   const gastos = fluxo.map(f => f.gastos).reverse();
 
-  charts.fluxoMensal = new Chart(ctx, {
+  charts.flow = new Chart(el.getContext('2d'), {
     type: 'bar',
     data: {
       labels: meses,
@@ -73,77 +122,57 @@ function renderFluxoMensal(fluxo) {
         {
           label: 'Entradas',
           data: entradas,
-          backgroundColor: 'rgba(76, 175, 80, 0.7)',
+          backgroundColor: 'rgba(34, 197, 94, 0.6)',
           borderRadius: 4,
+          borderSkipped: false,
         },
         {
           label: 'Gastos',
           data: gastos,
-          backgroundColor: 'rgba(244, 67, 54, 0.7)',
+          backgroundColor: 'rgba(239, 68, 68, 0.6)',
           borderRadius: 4,
+          borderSkipped: false,
         },
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#a0a0b0',
-            padding: 12,
-            font: { size: 11 },
-          },
-        },
-      },
-      scales: {
-        x: {
-          ticks: { color: '#a0a0b0', font: { size: 10 } },
-          grid: { color: 'rgba(255,255,255,0.05)' },
-        },
-        y: {
-          ticks: {
-            color: '#a0a0b0',
-            font: { size: 10 },
-            callback: (v) => 'R$ ' + v.toLocaleString('pt-BR'),
-          },
-          grid: { color: 'rgba(255,255,255,0.05)' },
-        },
-      },
+      ...flowOpts,
+      barPercentage: 0.6,
+      categoryPercentage: 0.7,
     },
   });
 }
 
-function renderMetas(data) {
+function renderGoals(data) {
   const totalGastos = data.total_saida || 0;
-  const custoVidaPct = totalGastos > 0 ? Math.round((data.custo_vida / totalGastos) * 100) : 0;
-  const extrasPct = totalGastos > 0 ? Math.round((data.despesas_extras / totalGastos) * 100) : 0;
-  const investidoPct = data.total_entrada > 0 ? Math.round((data.investido / data.total_entrada) * 100) : 0;
+  const totalEntrada = data.total_entrada || 0;
 
-  const metaCustoVida = 50;
-  const metaExtras = 20;
-  const metaInvestido = 20;
+  const cvPct = totalGastos > 0 ? Math.round((data.custo_vida / totalGastos) * 100) : 0;
+  const exPct = totalGastos > 0 ? Math.round((data.despesas_extras / totalGastos) * 100) : 0;
+  const invPct = totalEntrada > 0 ? Math.round((data.investido / totalEntrada) * 100) : 0;
 
-  renderBarraMeta('metaCustoVida', custoVidaPct, metaCustoVida, 'Custo de Vida');
-  renderBarraMeta('metaExtras', extrasPct, metaExtras, 'Despesas Extras');
-  renderBarraMeta('metaInvestido', investidoPct, metaInvestido, 'Investido');
+  setGoal('goalCustoVida', cvPct, 50, false, '% (ideal ≤ 50%)');
+  setGoal('goalExtras', exPct, 20, false, '% (ideal ≤ 20%)');
+  setGoal('goalInvestido', invPct, 20, true, '% (meta ≥ 20%)');
 }
 
-function renderBarraMeta(elementId, atual, ideal, label) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
+function setGoal(containerId, atual, limite, isInvert, suffix) {
+  const card = document.getElementById(containerId);
+  if (!card) return;
+  const pctDisplay = card.querySelector('.goal-pct');
+  const fill = card.querySelector('.goal-bar-fill');
 
-  const pct = Math.min(atual, 100);
-  const isOk = atual <= ideal;
+  let cls = 'goal-ok';
+  if (isInvert) {
+    if (atual < limite) cls = 'goal-alert';
+    else if (atual >= limite) cls = 'goal-ok';
+  } else {
+    if (atual > limite * 1.2) cls = 'goal-alert';
+    else if (atual > limite) cls = 'goal-warn';
+    else cls = 'goal-ok';
+  }
 
-  el.innerHTML = `
-    <div class="meta-header">
-      <span class="meta-label">${label}</span>
-      <span class="meta-valor">${atual}% (meta ${ideal}%)</span>
-    </div>
-    <div class="meta-bar-bg">
-      <div class="meta-bar-fill ${isOk ? 'meta-ok' : 'meta-alerta'}" style="width:${pct}%"></div>
-    </div>
-  `;
+  pctDisplay.textContent = atual + suffix;
+  fill.className = 'goal-bar-fill ' + cls;
+  fill.style.width = Math.min(atual, 100) + '%';
 }

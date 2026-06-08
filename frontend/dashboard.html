@@ -9,117 +9,125 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="apple-touch-icon" href="/icons/icon-512.svg">
-  <title>Finance AI - Dashboard</title>
+  <title>Finance AI — Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Finance AI</h1>
-      <p class="subtitle">Dashboard Financeiro</p>
-      <nav class="nav-bar">
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">$</div>
+        <div>
+          <div class="header-title">Finance AI</div>
+          <div class="header-sub">Dashboard Financeiro</div>
+        </div>
+      </div>
+      <nav class="header-nav">
         <a href="/" class="nav-link">Upload</a>
         <a href="/dashboard.html" class="nav-link active">Dashboard</a>
       </nav>
     </header>
 
-    <section id="resumoGeral" class="card">
-      <h2>Resumo Geral</h2>
-      <div class="resumo-grid" id="dashboardResumo">
-        <div class="resumo-item">
-          <span class="resumo-label">Saldo Total</span>
-          <span id="dashSaldo" class="resumo-valor">--</span>
-        </div>
-        <div class="resumo-item">
-          <span class="resumo-label">Total Entradas</span>
-          <span id="dashEntradas" class="resumo-valor">--</span>
-        </div>
-        <div class="resumo-item">
-          <span class="resumo-label">Total Saidas</span>
-          <span id="dashSaidas" class="resumo-valor">--</span>
-        </div>
-        <div class="resumo-item">
-          <span class="resumo-label">Investido</span>
-          <span id="dashInvestido" class="resumo-valor">--</span>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-label">Saldo Total</div>
+      <div class="hero-balance" id="heroSaldo">R$ 0,00</div>
+      <div class="hero-change" id="heroChange"></div>
+    </section>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Entradas</div>
+        <div class="kpi-value green" id="kpiEntradas">R$ 0,00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Saídas</div>
+        <div class="kpi-value red" id="kpiSaidas">R$ 0,00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Investido</div>
+        <div class="kpi-value accent" id="kpiInvestido">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Accounts -->
+    <section>
+      <h2 class="section-title">Contas</h2>
+      <div class="accounts-grid" id="accountsGrid">
+        <div class="account-card">
+          <p class="loading">Carregando...</p>
         </div>
       </div>
     </section>
 
-    <section id="secaoContas" class="card">
-      <h2>Contas</h2>
-      <div class="table-wrapper">
-        <table id="contasTable">
-          <thead>
-            <tr>
-              <th>Conta</th>
-              <th>Tipo</th>
-              <th>Saldo</th>
-              <th>Transacoes</th>
-            </tr>
-          </thead>
-          <tbody id="contasBody">
-            <tr><td colspan="4" class="loading">Carregando...</td></tr>
+    <!-- Categories + Chart -->
+    <div class="dashboard-grid">
+      <section class="card">
+        <h3>Gastos por Categoria</h3>
+        <table class="cat-table" id="catTable">
+          <tbody id="categoriasBody">
+            <tr><td colspan="3" class="loading">Carregando...</td></tr>
           </tbody>
         </table>
-      </div>
-    </section>
-
-    <div class="dashboard-grid">
-      <section id="secaoCategorias" class="card">
-        <h2>Categorias</h2>
-        <div class="table-wrapper">
-          <table id="categoriasTable">
-            <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Valor</th>
-                <th>%</th>
-              </tr>
-            </thead>
-            <tbody id="categoriasBody">
-              <tr><td colspan="3" class="loading">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
       </section>
-
-      <section id="secaoGraficos" class="card">
-        <h2>Gastos por Categoria</h2>
+      <section class="card">
+        <h3>Distribuição</h3>
         <div class="chart-container">
           <canvas id="chartCategorias"></canvas>
         </div>
       </section>
     </div>
 
-    <section id="secaoFluxo" class="card">
-      <h2>Fluxo Mensal</h2>
+    <!-- Flow -->
+    <section class="card flow-section">
+      <h3>Fluxo Mensal</h3>
       <div class="chart-container chart-full">
         <canvas id="chartFluxo"></canvas>
       </div>
     </section>
 
-    <section id="secaoMetas" class="card">
-      <h2>Metas Financeiras</h2>
-      <p class="meta-subtitle">Percentual real vs ideal</p>
-      <div class="metas-grid">
-        <div id="metaCustoVida" class="meta-item"></div>
-        <div id="metaExtras" class="meta-item"></div>
-        <div id="metaInvestido" class="meta-item"></div>
+    <!-- Goals -->
+    <section class="card">
+      <h3>Metas Financeiras</h3>
+      <div class="goals-grid">
+        <div class="goal-card" id="goalCustoVida">
+          <div class="goal-header">
+            <span class="goal-label">Custo de Vida</span>
+            <span class="goal-pct">--</span>
+          </div>
+          <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:0%"></div></div>
+          <div class="goal-meta">Ideal: ≤ 50%</div>
+        </div>
+        <div class="goal-card" id="goalExtras">
+          <div class="goal-header">
+            <span class="goal-label">Despesas Extras</span>
+            <span class="goal-pct">--</span>
+          </div>
+          <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:0%"></div></div>
+          <div class="goal-meta">Ideal: ≤ 20%</div>
+        </div>
+        <div class="goal-card" id="goalInvestido">
+          <div class="goal-header">
+            <span class="goal-label">Investido</span>
+            <span class="goal-pct">--</span>
+          </div>
+          <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:0%"></div></div>
+          <div class="goal-meta">Meta: ≥ 20%</div>
+        </div>
       </div>
     </section>
 
     <div class="action-bar">
-      <button id="refreshDashboard" class="btn btn-primary">Atualizar Dashboard</button>
+      <button id="refreshDashboard" class="btn btn-primary">
+        <span class="btn-icon">&#x21bb;</span> Atualizar Dashboard
+      </button>
     </div>
   </div>
 
   <script src="charts.js" type="module"></script>
   <script src="app.js" type="module"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
-  </script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>
