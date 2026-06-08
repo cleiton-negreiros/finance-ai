@@ -6,32 +6,40 @@
 /cash
 ├── backend/
 │   ├── server.js          # Servidor Express (porta 3000)
-│   ├── db.js              # Conexão SQLite + init
+│   ├── db.js              # Conexão SQLite + init + seedContas()
 │   ├── importer.js        # Importador de CSV
-│   ├── filters.js         # Categorização automática por regex
+│   ├── categorizer.js     # Categorização automática (~100 regex)
+│   ├── engine/
+│   │   ├── consolidator.js # Motor de consolidação financeira
+│   │   └── metrics.js      # Métricas e percentuais
 │   ├── normalizers/       # Normalizadores por fonte
-│   │   ├── c6.js
-│   │   ├── mercadopago.js
-│   │   ├── binance.js
-│   │   ├── rico.js
-│   │   └── nomad.js
+│   │   ├── c6.js          # conta: C6 Bank
+│   │   ├── mercadopago.js # conta: Mercado Pago
+│   │   ├── binance.js     # conta: Binance
+│   │   ├── rico.js        # conta: Rico
+│   │   └── nomad.js       # conta: Nomad
 │   └── uploads/           # Pasta temporária de uploads
 ├── frontend/
-│   ├── index.html         # Interface web
-│   ├── app.js             # Lógica do frontend (fetch API)
-│   └── style.css          # Tema dark
+│   ├── index.html         # Upload CSV + navegação
+│   ├── dashboard.html     # Dashboard completo com Chart.js
+│   ├── app.js             # Lógica upload + dashboard
+│   ├── charts.js          # Gráficos (Chart.js)
+│   └── style.css          # Tema dark + dashboard responsivo
 ├── database/
-│   ├── schema.sql         # Schema SQLite
+│   ├── schema.sql         # Schema SQLite (contas + transacoes)
 │   └── finance.db         # Banco de dados (gerado automaticamente)
-├── CEREBRO.md             # Este arquivo - inteligência completa
-├── README.md              # Documentação do usuário
+├── samples/               # CSVs de exemplo
+├── CEREBRO.md
+├── AI_README.md
+├── README.md
+├── INSTALL.md
 ├── package.json
 ├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
 ├── netlify.toml
-├── setup.sh               # Setup rápido Linux/Mac/Termux
-├── setup.ps1              # Setup rápido Windows
-├── sync.sh                # Sincronização mobile
-└── sync.ps1               # Sincronização Windows
+├── setup.sh / setup.ps1
+├── sync.sh / sync.ps1
 ```
 
 ## Stack Tecnológica
@@ -59,6 +67,14 @@ Lista transações.
 Resumo financeiro.
 - Retorna: `{ total_gastos, total_entradas, saldo, total_investimentos }`
 
+### GET /contas
+Lista todas as contas cadastradas.
+- Retorna: `[{ nome, tipo, saldo_atual }]`
+
+### GET /dashboard
+Dashboard completo com consolidação e métricas.
+- Retorna consolidação + métricas em um único JSON
+
 ## Fluxo de Importação
 
 1. Usuário seleciona fonte e arquivo CSV no frontend
@@ -68,17 +84,25 @@ Resumo financeiro.
 5. importer.js lê CSV linha a linha com stream (readline)
 6. Para cada linha, chama o normalizador correspondente à fonte
 7. Normalizador mapeia colunas, converte tipos, padroniza data
-8. filters.js categoriza automaticamente por regex na descrição
-9. Gera hash MD5 único (data+valor+descricao+fonte) para evitar duplicatas
+8. categorizer.js categoriza automaticamente por regex na descrição
+9. Adiciona campo conta (baseado no normalizador ou coluna do CSV)
+10. Gera hash MD5 único (data+valor+descricao+fonte) para evitar duplicatas
 10. Insere em batch com transação SQLite (INSERT OR IGNORE)
 11. Remove arquivo temporário
 
 ## Estrutura do Banco (SQLite)
 
 ```sql
+contas (
+  nome         TEXT PRIMARY KEY,
+  tipo         TEXT NOT NULL,        -- banco | carteira | corretora
+  saldo_atual  REAL DEFAULT 0
+)
+
 transacoes (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   fonte       TEXT NOT NULL,
+  conta       TEXT NOT NULL,
   tipo        TEXT NOT NULL,        -- gasto | entrada | investimento
   valor       REAL NOT NULL,
   moeda       TEXT NOT NULL,        -- BRL | USD | BTC | ETH
@@ -90,9 +114,49 @@ transacoes (
 )
 ```
 
+## Motor de Consolidação (engine/consolidator.js)
+
+Agrupa transações por conta e calcula:
+- `saldo_total`: entradas - gastos
+- `total_entrada`: soma de todas as entradas
+- `total_saida`: soma de todos os gastos
+- `total_investido`: soma de investimentos
+- `saldo_por_conta[]`: array com nome, tipo, saldo_calculado, qtd_transacoes
+
+## Motor de Métricas (engine/metrics.js)
+
+Categoriza e calcula indicadores:
+- `custo_vida`: gastos em alimentacao + moradia + contas + transporte + saude
+- `despesas_extras`: gastos em lazer + compras + streaming + assinaturas
+- `investido`: total de investimentos
+- `percentual_por_categoria[]`: cada categoria com valor e % do total
+- `fluxo_mensal[]`: últimos 12 meses com entradas e gastos
+
+## Categorizador (categorizer.js)
+
+13 grupos de regex (~100 padrões):
+- alimentacao: ifood, supermercado, padaria, acougue, feira, etc
+- moradia: aluguel, condominio, agua, luz, internet, gas
+- transporte: uber, 99, taxi, gasolina, onibus, metro, pedagio
+- saude: farmacia, medico, dentista, plano saude, exames
+- compras: amazon, shopee, magalu, roupas, eletronicos
+- streaming: netflix, spotify, hbo, disney, primevideo
+- lazer: cinema, viagem, restaurante, bar, academia, show
+- salario: salario, holerite, decimo, bonus, freela, PJ
+- transferencia: pix, ted, doc, boleto
+- investimento: acao, fii, cdb, tesouro, Bitcoin, ETH
+- financeiro: cartao, anuidade, juros, multa
+- educacao: escola, faculdade, curso, mensalidade
+- delivery: ifood, uber eats, rappi
+- default: outros
+
 ## Normalizadores (mapeamento de colunas)
 
+Cada normalizador agora inclui o campo `conta` (padrão da instituição).
+Pode ser sobrescrito com a coluna `conta` no CSV.
+
 ### C6 Bank
+- `conta`: 'C6 Bank'
 - `valor` → number, negativo=gasto, positivo=entrada
 - `descricao` → texto
 - `data` → DD/MM/YYYY → YYYY-MM-DD
@@ -121,20 +185,7 @@ transacoes (
 - `descricao` | `description` | `detalhes` → texto
 - Moeda: detecta USD/BRL
 
-## Categorização Automática (filters.js)
-
-Regras baseadas em regex na descrição:
-- transporte: uber, 99, taxi, gasolina, posto
-- alimentacao: ifood, mercado, supermercado
-- compras: amazon, shopee, magalu
-- streaming: netflix, spotify, hbo, disney, primevideo
-- moradia: aluguel
-- contas: energia, agua, vivo, tim, claro
-- saude: farmacia, droga
-- salario: salario
-- transferencia: transferencia, pix
-- recebimento: payment
-- default: outros
+(A categorização foi movida para a seção do Categorizador acima)
 
 ## Como Rodar
 
