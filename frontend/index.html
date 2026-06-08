@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Finance AI</h1>
+      <p class="subtitle">Consolidacao Financeira Local</p>
+    </header>
+
+    <section class="card upload-card">
+      <h2>Upload de Transacoes</h2>
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="fonteSelect">Fonte:</label>
+          <select id="fonteSelect" required>
+            <option value="">Selecione...</option>
+            <option value="c6">C6 Bank</option>
+            <option value="mercadopago">Mercado Pago</option>
+            <option value="binance">Binance</option>
+            <option value="rico">Rico</option>
+            <option value="nomad">Nomad</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="fileInput">Arquivo CSV:</label>
+          <input type="file" id="fileInput" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload</button>
+      </form>
+      <div id="uploadStatus" class="status"></div>
+    </section>
+
+    <section class="card resumo-card">
+      <h2>Resumo Financeiro</h2>
+      <div id="resumoContainer" class="resumo-grid">
+        <div class="resumo-item entradas">
+          <span class="resumo-label">Entradas</span>
+          <span id="totalEntradas" class="resumo-valor">R$ 0,00</span>
+        </div>
+        <div class="resumo-item gastos">
+          <span class="resumo-label">Gastos</span>
+          <span id="totalGastos" class="resumo-valor">R$ 0,00</span>
+        </div>
+        <div class="resumo-item saldo">
+          <span class="resumo-label">Saldo</span>
+          <span id="saldoTotal" class="resumo-valor">R$ 0,00</span>
+        </div>
+        <div class="resumo-item investimentos">
+          <span class="resumo-label">Investimentos</span>
+          <span id="totalInvestimentos" class="resumo-valor">R$ 0,00</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card transacoes-card">
+      <div class="transacoes-header">
+        <h2>Transacoes</h2>
+        <button id="refreshBtn" class="btn btn-secondary">Atualizar</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="transacoesTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Fonte</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Moeda</th>
+              <th>Descricao</th>
+              <th>Categoria</th>
+            </tr>
+          </thead>
+          <tbody id="transacoesBody">
+            <tr>
+              <td colspan="7" class="loading">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

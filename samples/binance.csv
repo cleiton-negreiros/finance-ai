@@ -1,0 +1,4 @@
+data,par,tipo,quantidade,moeda
+01/01/2026,BTCBRLL,compra,0.001,BTC
+05/01/2026,ETHBRLL,venda,0.01,ETH
+10/01/2026,USDTBRL,taxa,5.00,USDT

@@ -1,0 +1,8 @@
+node_modules/
+backend/uploads/*
+!backend/uploads/.gitkeep
+database/finance.db
+*.log
+.env
+.DS_Store
+Thumbs.db
