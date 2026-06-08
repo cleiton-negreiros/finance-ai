@@ -11,6 +11,10 @@
     <header>
       <h1>Finance AI</h1>
       <p class="subtitle">Consolidacao Financeira Local</p>
+      <nav class="nav-bar">
+        <a href="/" class="nav-link active">Upload</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+      </nav>
     </header>
 
     <div id="apiWarning" class="card warning-card" style="display:none">
@@ -74,6 +78,7 @@
           <thead>
             <tr>
               <th>Data</th>
+              <th>Conta</th>
               <th>Fonte</th>
               <th>Tipo</th>
               <th>Valor</th>
@@ -84,7 +89,7 @@
           </thead>
           <tbody id="transacoesBody">
             <tr>
-              <td colspan="7" class="loading">Carregando...</td>
+              <td colspan="8" class="loading">Carregando...</td>
             </tr>
           </tbody>
         </table>

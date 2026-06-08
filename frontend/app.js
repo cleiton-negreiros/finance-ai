@@ -3,8 +3,17 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
   : 'http://localhost:3000';
 
 document.addEventListener('DOMContentLoaded', () => {
+  const isDashboard = window.location.pathname.includes('dashboard');
+
+  if (isDashboard) {
+    initDashboard();
+  } else {
+    initUpload();
+  }
+});
+
+function initUpload() {
   const uploadForm = document.getElementById('uploadForm');
-  const uploadStatus = document.getElementById('uploadStatus');
   const refreshBtn = document.getElementById('refreshBtn');
 
   if (API_BASE) {
@@ -16,12 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadTransacoes();
   loadResumo();
-});
+}
 
 async function handleUpload(e) {
   e.preventDefault();
 
-  const form = e.target;
   const fileInput = document.getElementById('fileInput');
   const fonteSelect = document.getElementById('fonteSelect');
   const status = document.getElementById('uploadStatus');
@@ -64,14 +72,15 @@ async function handleUpload(e) {
 
 async function loadTransacoes() {
   const tbody = document.getElementById('transacoesBody');
-  tbody.innerHTML = '<tr><td colspan="7" class="loading">Carregando...</td></tr>';
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">Carregando...</td></tr>';
 
   try {
     const response = await fetch(API_BASE + '/transacoes?limit=100');
     const transacoes = await response.json();
 
     if (!transacoes.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">Nenhuma transacao encontrada</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="loading">Nenhuma transacao encontrada</td></tr>';
       return;
     }
 
@@ -81,6 +90,7 @@ async function loadTransacoes() {
 
       return `<tr>
         <td data-label="Data">${formatDate(t.data)}</td>
+        <td data-label="Conta">${escapeHtml(t.conta || t.fonte)}</td>
         <td data-label="Fonte">${capitalize(t.fonte)}</td>
         <td data-label="Tipo">${capitalize(t.tipo)}</td>
         <td data-label="Valor" class="${valorClass}">${signal} ${formatCurrency(t.valor, t.moeda)}</td>
@@ -90,7 +100,7 @@ async function loadTransacoes() {
       </tr>`;
     }).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="loading error-text">Erro ao carregar: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="loading error-text">Erro ao carregar: ${err.message}</td></tr>`;
   }
 }
 
@@ -99,13 +109,18 @@ async function loadResumo() {
     const response = await fetch(API_BASE + '/resumo');
     const resumo = await response.json();
 
-    document.getElementById('totalEntradas').textContent = formatCurrency(resumo.total_entradas);
-    document.getElementById('totalGastos').textContent = formatCurrency(resumo.total_gastos);
-    document.getElementById('saldoTotal').textContent = formatCurrency(resumo.saldo);
-    document.getElementById('totalInvestimentos').textContent = formatCurrency(resumo.total_investimentos);
+    const elEntradas = document.getElementById('totalEntradas');
+    const elGastos = document.getElementById('totalGastos');
+    const elSaldo = document.getElementById('saldoTotal');
+    const elInvest = document.getElementById('totalInvestimentos');
 
-    const saldoEl = document.getElementById('saldoTotal');
-    saldoEl.style.color = resumo.saldo >= 0 ? '#4caf50' : '#f44336';
+    if (elEntradas) elEntradas.textContent = formatCurrency(resumo.total_entradas);
+    if (elGastos) elGastos.textContent = formatCurrency(resumo.total_gastos);
+    if (elSaldo) {
+      elSaldo.textContent = formatCurrency(resumo.saldo);
+      elSaldo.style.color = resumo.saldo >= 0 ? '#4caf50' : '#f44336';
+    }
+    if (elInvest) elInvest.textContent = formatCurrency(resumo.total_investimentos);
   } catch (err) {
     console.error('Erro ao carregar resumo:', err);
   }
@@ -113,6 +128,7 @@ async function loadResumo() {
 
 function showStatus(msg, type) {
   const status = document.getElementById('uploadStatus');
+  if (!status) return;
   status.textContent = msg;
   status.className = 'status ' + type;
   setTimeout(() => {
@@ -133,7 +149,7 @@ function formatDate(dateStr) {
 
 function formatCurrency(value, moeda) {
   const num = parseFloat(value) || 0;
-  const symbol = moeda === 'USD' ? 'US$' : moeda === 'BTC' ? '₿' : 'R$';
+  const symbol = moeda === 'USD' ? 'US$' : moeda === 'BTC' ? '\u20bf' : 'R$';
   return `${symbol} ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -146,4 +162,86 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+/* ===== DASHBOARD ===== */
+
+async function initDashboard() {
+  const refreshBtn = document.getElementById('refreshDashboard');
+  refreshBtn.addEventListener('click', loadDashboard);
+  await loadDashboard();
+}
+
+async function loadDashboard() {
+  try {
+    const response = await fetch(API_BASE + '/dashboard');
+    const data = await response.json();
+
+    renderResumo(data);
+    renderContas(data.saldo_por_conta);
+    renderCategorias(data.percentual_por_categoria);
+
+    if (typeof renderCharts === 'function') {
+      renderCharts(data);
+    }
+  } catch (err) {
+    console.error('Erro ao carregar dashboard:', err);
+  }
+}
+
+function renderResumo(data) {
+  const saldoEl = document.getElementById('dashSaldo');
+  if (saldoEl) {
+    saldoEl.textContent = formatCurrency(data.saldo_total);
+    saldoEl.style.color = data.saldo_total >= 0 ? '#4caf50' : '#f44336';
+  }
+  setText('dashEntradas', formatCurrency(data.total_entrada));
+  setText('dashSaidas', formatCurrency(data.total_saida));
+  setText('dashInvestido', formatCurrency(data.total_investido));
+}
+
+function renderContas(contas) {
+  const tbody = document.getElementById('contasBody');
+  if (!tbody) return;
+
+  if (!contas || !contas.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Nenhuma conta</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = contas.map(c => {
+    const saldoClass = c.saldo_calculado >= 0 ? 'valor-entrada' : 'valor-gasto';
+    return `<tr>
+      <td data-label="Conta">${escapeHtml(c.nome)}</td>
+      <td data-label="Tipo">${capitalize(c.tipo)}</td>
+      <td data-label="Saldo" class="${saldoClass}">${formatCurrency(c.saldo_calculado)}</td>
+      <td data-label="Transacoes">${c.qtd_transacoes}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCategorias(categorias) {
+  const tbody = document.getElementById('categoriasBody');
+  if (!tbody) return;
+
+  if (!categorias || !categorias.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Nenhuma categoria</td></tr>';
+    return;
+  }
+
+  const total = categorias.reduce((acc, c) => acc + c.valor, 0);
+
+  tbody.innerHTML = categorias.map(c => {
+    const pct = total > 0 ? ((c.valor / total) * 100).toFixed(1) : 0;
+    return `<tr>
+      <td data-label="Categoria">${capitalize(c.categoria)}</td>
+      <td data-label="Valor">${formatCurrency(c.valor)}</td>
+      <td data-label="%">${pct}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
 }

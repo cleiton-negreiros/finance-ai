@@ -3,7 +3,7 @@ import { unlink } from 'fs/promises';
 import readline from 'readline';
 import crypto from 'crypto';
 import { getDB } from './db.js';
-import { categorizar } from './filters.js';
+import { categorizar } from './categorizer.js';
 import { normalize as normalizeC6 } from './normalizers/c6.js';
 import { normalize as normalizeMercadopago } from './normalizers/mercadopago.js';
 import { normalize as normalizeBinance } from './normalizers/binance.js';
@@ -99,8 +99,8 @@ export async function importCSV(filePath, fonte) {
   }
 
   const insertStmt = db.prepare(`
-    INSERT OR IGNORE INTO transacoes (fonte, tipo, valor, moeda, descricao, categoria, data, hash)
-    VALUES (@fonte, @tipo, @valor, @moeda, @descricao, @categoria, @data, @hash)
+    INSERT OR IGNORE INTO transacoes (fonte, conta, tipo, valor, moeda, descricao, categoria, data, hash)
+    VALUES (@fonte, @conta, @tipo, @valor, @moeda, @descricao, @categoria, @data, @hash)
   `);
 
   let insertedCount = 0;

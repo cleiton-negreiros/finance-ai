@@ -4,6 +4,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { initDB, getDB } from './db.js';
 import { importCSV } from './importer.js';
+import { consolidar } from './engine/consolidator.js';
+import { calcularMetricas } from './engine/metrics.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -59,6 +61,17 @@ app.get('/transacoes', (req, res) => {
   }
 });
 
+app.get('/contas', (req, res) => {
+  try {
+    const db = getDB();
+    const rows = db.prepare('SELECT * FROM contas ORDER BY nome').all();
+    res.json(rows);
+  } catch (err) {
+    console.error('Erro ao buscar contas:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/resumo', (req, res) => {
   try {
     const db = getDB();
@@ -74,6 +87,21 @@ app.get('/resumo', (req, res) => {
     });
   } catch (err) {
     console.error('Erro ao gerar resumo:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/dashboard', (req, res) => {
+  try {
+    const consolidado = consolidar();
+    const metricas = calcularMetricas();
+
+    res.json({
+      ...consolidado,
+      ...metricas,
+    });
+  } catch (err) {
+    console.error('Erro ao gerar dashboard:', err);
     res.status(500).json({ error: err.message });
   }
 });

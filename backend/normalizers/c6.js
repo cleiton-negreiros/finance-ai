@@ -4,6 +4,7 @@ export function normalize(row, fonte) {
 
   return {
     fonte,
+    conta: row.conta || 'C6 Bank',
     tipo,
     valor: Math.abs(valor),
     moeda: 'BRL',
@@ -15,11 +16,9 @@ export function normalize(row, fonte) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  // DD/MM/YYYY -> YYYY-MM-DD
   const parts = dateStr.split('/');
   if (parts.length === 3 && parts[2].length === 4) {
     return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
   }
-  // YYYY-MM-DD already
   return dateStr;
 }

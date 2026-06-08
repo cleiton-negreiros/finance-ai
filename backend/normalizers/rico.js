@@ -12,6 +12,7 @@ export function normalize(row, fonte) {
 
   return {
     fonte,
+    conta: row.conta || 'Rico',
     tipo,
     valor: Math.abs(valor),
     moeda: 'BRL',

@@ -4,6 +4,7 @@ export function normalize(row, fonte) {
 
   return {
     fonte,
+    conta: row.conta || 'Mercado Pago',
     tipo,
     valor: Math.abs(valor),
     moeda: 'BRL',
@@ -15,12 +16,10 @@ export function normalize(row, fonte) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  // DD/MM/YYYY
   const parts = dateStr.split('/');
   if (parts.length === 3 && parts[2].length === 4) {
     return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
   }
-  // ISO 8601
   const d = new Date(dateStr);
   if (!isNaN(d.getTime())) {
     return d.toISOString().split('T')[0];

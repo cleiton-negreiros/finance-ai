@@ -17,6 +17,8 @@ export function initDB() {
   const schema = readFileSync(SCHEMA_PATH, 'utf-8');
   db.exec(schema);
 
+  seedContas();
+
   return db;
 }
 
@@ -25,6 +27,26 @@ export function getDB() {
     return initDB();
   }
   return db;
+}
+
+function seedContas() {
+  const defaultContas = [
+    { nome: 'C6 Bank', tipo: 'banco' },
+    { nome: '99Pay', tipo: 'carteira' },
+    { nome: 'Mercado Pago', tipo: 'carteira' },
+    { nome: 'Rico', tipo: 'corretora' },
+    { nome: 'Binance', tipo: 'corretora' },
+    { nome: 'Nomad', tipo: 'carteira' },
+    { nome: 'Nubank', tipo: 'banco' },
+    { nome: 'Caixa', tipo: 'banco' },
+    { nome: 'Itau', tipo: 'banco' },
+    { nome: 'Inter', tipo: 'banco' },
+  ];
+
+  const insert = db.prepare('INSERT OR IGNORE INTO contas (nome, tipo) VALUES (@nome, @tipo)');
+  for (const c of defaultContas) {
+    insert.run(c);
+  }
 }
 
 export function closeDB() {

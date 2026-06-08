@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance AI - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Finance AI</h1>
+      <p class="subtitle">Dashboard Financeiro</p>
+      <nav class="nav-bar">
+        <a href="/" class="nav-link">Upload</a>
+        <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+      </nav>
+    </header>
+
+    <section id="resumoGeral" class="card">
+      <h2>Resumo Geral</h2>
+      <div class="resumo-grid" id="dashboardResumo">
+        <div class="resumo-item">
+          <span class="resumo-label">Saldo Total</span>
+          <span id="dashSaldo" class="resumo-valor">--</span>
+        </div>
+        <div class="resumo-item">
+          <span class="resumo-label">Total Entradas</span>
+          <span id="dashEntradas" class="resumo-valor">--</span>
+        </div>
+        <div class="resumo-item">
+          <span class="resumo-label">Total Saidas</span>
+          <span id="dashSaidas" class="resumo-valor">--</span>
+        </div>
+        <div class="resumo-item">
+          <span class="resumo-label">Investido</span>
+          <span id="dashInvestido" class="resumo-valor">--</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="secaoContas" class="card">
+      <h2>Contas</h2>
+      <div class="table-wrapper">
+        <table id="contasTable">
+          <thead>
+            <tr>
+              <th>Conta</th>
+              <th>Tipo</th>
+              <th>Saldo</th>
+              <th>Transacoes</th>
+            </tr>
+          </thead>
+          <tbody id="contasBody">
+            <tr><td colspan="4" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="dashboard-grid">
+      <section id="secaoCategorias" class="card">
+        <h2>Categorias</h2>
+        <div class="table-wrapper">
+          <table id="categoriasTable">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="categoriasBody">
+              <tr><td colspan="3" class="loading">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="secaoGraficos" class="card">
+        <h2>Gastos por Categoria</h2>
+        <div class="chart-container">
+          <canvas id="chartCategorias"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <section id="secaoFluxo" class="card">
+      <h2>Fluxo Mensal</h2>
+      <div class="chart-container chart-full">
+        <canvas id="chartFluxo"></canvas>
+      </div>
+    </section>
+
+    <section id="secaoMetas" class="card">
+      <h2>Metas Financeiras</h2>
+      <p class="meta-subtitle">Percentual real vs ideal</p>
+      <div class="metas-grid">
+        <div id="metaCustoVida" class="meta-item"></div>
+        <div id="metaExtras" class="meta-item"></div>
+        <div id="metaInvestido" class="meta-item"></div>
+      </div>
+    </section>
+
+    <div class="action-bar">
+      <button id="refreshDashboard" class="btn btn-primary">Atualizar Dashboard</button>
+    </div>
+  </div>
+
+  <script src="charts.js" type="module"></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
