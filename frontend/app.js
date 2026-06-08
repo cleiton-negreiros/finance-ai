@@ -1,7 +1,15 @@
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? ''
+  : 'http://localhost:3000';
+
 document.addEventListener('DOMContentLoaded', () => {
   const uploadForm = document.getElementById('uploadForm');
   const uploadStatus = document.getElementById('uploadStatus');
   const refreshBtn = document.getElementById('refreshBtn');
+
+  if (API_BASE) {
+    document.getElementById('apiWarning').style.display = 'block';
+  }
 
   uploadForm.addEventListener('submit', handleUpload);
   refreshBtn.addEventListener('click', loadTransacoes);
@@ -30,7 +38,7 @@ async function handleUpload(e) {
   showStatus('Enviando...', 'info');
 
   try {
-    const response = await fetch('/upload', {
+    const response = await fetch(API_BASE + '/upload', {
       method: 'POST',
       body: formData,
     });
@@ -59,7 +67,7 @@ async function loadTransacoes() {
   tbody.innerHTML = '<tr><td colspan="7" class="loading">Carregando...</td></tr>';
 
   try {
-    const response = await fetch('/transacoes?limit=100');
+    const response = await fetch(API_BASE + '/transacoes?limit=100');
     const transacoes = await response.json();
 
     if (!transacoes.length) {
@@ -88,7 +96,7 @@ async function loadTransacoes() {
 
 async function loadResumo() {
   try {
-    const response = await fetch('/resumo');
+    const response = await fetch(API_BASE + '/resumo');
     const resumo = await response.json();
 
     document.getElementById('totalEntradas').textContent = formatCurrency(resumo.total_entradas);

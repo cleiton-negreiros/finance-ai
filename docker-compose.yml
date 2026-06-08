@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  finance-ai:
+    build: .
+    container_name: finance-ai
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./database:/app/database
+      - ./backend/uploads:/app/backend/uploads
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

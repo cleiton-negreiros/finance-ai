@@ -8,3 +8,6 @@ database/finance.db-wal
 .env
 .DS_Store
 Thumbs.db
+
+# Local Netlify folder
+.netlify

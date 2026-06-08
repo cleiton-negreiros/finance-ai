@@ -1,15 +1,22 @@
 {
   "name": "cash",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Finance AI - Consolidacao financeira local com upload CSV",
+  "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node --watch backend/server.js",
+    "setup": "node -e \"console.log('Setup completo. Use: npm start')\"",
+    "sync:win": "powershell -ExecutionPolicy Bypass -File sync.ps1",
+    "sync:nix": "bash sync.sh",
+    "test": "node --experimental-vm-modules backend/test.js",
+    "docker:build": "docker build -t finance-ai .",
+    "docker:run": "docker run -p 3000:3000 -v \"$(pwd)/database:/app/database\" finance-ai",
+    "clean": "node -e \"require('fs').unlinkSync('database/finance.db'); console.log('Banco resetado')\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["finance", "csv", "sqlite", "express"],
+  "author": "Finance AI",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "better-sqlite3": "^12.10.0",

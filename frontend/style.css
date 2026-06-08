@@ -156,6 +156,25 @@ input[type="file"]::file-selector-button {
   border: 1px solid rgba(33, 150, 243, 0.3);
 }
 
+.warning-card {
+  background: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.3);
+  text-align: center;
+}
+
+.warning-card code {
+  background: var(--bg-primary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin: 8px 0;
+}
+
+.warning-card a {
+  color: var(--accent);
+}
+
 .resumo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
