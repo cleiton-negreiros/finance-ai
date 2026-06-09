@@ -9,6 +9,7 @@ import { normalize as normalizeMercadopago } from './normalizers/mercadopago.js'
 import { normalize as normalizeBinance } from './normalizers/binance.js';
 import { normalize as normalizeRico } from './normalizers/rico.js';
 import { normalize as normalizeNomad } from './normalizers/nomad.js';
+import { normalize as normalize99Pay } from './normalizers/99pay.js';
 
 const NORMALIZADORES = {
   c6: normalizeC6,
@@ -16,6 +17,7 @@ const NORMALIZADORES = {
   binance: normalizeBinance,
   rico: normalizeRico,
   nomad: normalizeNomad,
+  99pay: normalize99Pay,
 };
 
 function gerarHash(transacao) {

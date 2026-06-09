@@ -1,0 +1,9 @@
+data,descricao,valor,tipo
+2025-01-15,Pagamento recebido,1500.00,entrada
+2025-01-16,Conta de luz,289.90,saida
+2025-01-16,Mercado,534.20,saida
+2025-01-17,Transferencia recebida,200.00,entrada
+2025-01-18,Restaurante,89.50,saida
+2025-01-20,Recarga celular,35.00,saida
+2025-01-22,PIX recebido,750.00,entrada
+2025-01-25,Assinatura streaming,49.90,saida
