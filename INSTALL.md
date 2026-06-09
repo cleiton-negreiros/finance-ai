@@ -229,6 +229,58 @@ data,descricao,amount,currency
 01/01/2026,Transferencia,500.00,USD
 ```
 
+### 99Pay
+```csv
+data,descricao,valor,tipo
+2025-01-15,Pagamento recebido,1500.00,entrada
+2025-01-16,Conta de luz,289.90,saida
+```
+
+---
+
+## App Android (99Pay Extractor)
+
+### Testar o normalizer agora (no PC)
+
+Abra o terminal e cole:
+```bash
+node -e "import('./backend/importer.js').then(m => m.importCSV('./samples/99pay.csv', '99pay').then(r => console.log(JSON.stringify(r, null, 2))))"
+```
+Se funcionar, aparece: `{ "total": 8, "inseridas": 8, ... }`
+
+### Buildar o app (no Android Studio)
+
+1. Abra o **Android Studio**
+2. **File → Open** → selecione `C:\cash\99pay-extractor`
+3. Ele baixa as dependências sozinho (pode demorar na primeira vez)
+4. Conecte o celular no USB com **depuração USB ativada**
+5. Clique no **▶ (Run)** — o app instala no celular
+
+### Usar o app no celular
+
+1. Abra o **99Pay** → vá no histórico/extrato
+2. Abra o **99Pay Extractor**
+3. Toque em **"Iniciar Captura"** → aceite a permissão de tela
+4. Volte pro 99Pay e vá rolando o histórico
+5. Quando terminar, volte pro extractor → **"Parar Captura"**
+6. Toque em **"Exportar CSV"**
+7. O arquivo salva em `Documentos/99PayExport/`
+
+### Levar o CSV pro PC
+
+**Drive (mais fácil):**
+1. No celular: abra **Arquivos** → `Documentos/99PayExport/`
+2. Compartilhe o CSV pelo Google Drive
+3. No PC: baixe o CSV pra `C:\cash\samples\`
+
+**Cabo USB:**
+1. Conecte o celular ao PC
+2. Copie de `Documents/99PayExport/` pra `C:\cash\samples\`
+
+**Depois de ter o CSV no PC:**
+- Pelo site: http://localhost:3000 → fonte **99Pay** → upload
+- Ou rode `.\sync.ps1 "extrato 99pay"` pra enviar ao GitHub
+
 ---
 
 ## Solução de Problemas
@@ -300,7 +352,8 @@ docker-compose up -d
 │   │   ├── mercadopago.js
 │   │   ├── binance.js
 │   │   ├── rico.js
-│   │   └── nomad.js
+│   │   ├── nomad.js
+│   │   └── 99pay.js
 │   └── uploads/
 ├── frontend/
 │   ├── index.html
