@@ -1,0 +1,16 @@
+{
+  "name": "cash-termux",
+  "version": "1.0.0",
+  "description": "Finance AI - Termux version with sql.js",
+  "main": "backend/server-termux.js",
+  "scripts": {
+    "start": "node backend/server-termux.js",
+    "dev": "node --watch backend/server-termux.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "sql.js": "^1.11.0"
+  }
+}
