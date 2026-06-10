@@ -17,7 +17,7 @@ const NORMALIZADORES = {
   binance: normalizeBinance,
   rico: normalizeRico,
   nomad: normalizeNomad,
-  99pay: normalize99Pay,
+  '99pay': normalize99Pay,
 };
 
 function gerarHash(transacao) {

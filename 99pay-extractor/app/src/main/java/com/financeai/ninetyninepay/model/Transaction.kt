@@ -9,8 +9,7 @@ data class Transaction(
     enum class Tipo { ENTRADA, SAIDA }
 
     fun toCSV(): String {
-        val signal = if (tipo == Tipo.SAIDA) "-" else ""
-        return "${data},${escapeCsv(descricao)},${signal}${"%.2f".format(valor)}"
+        return "${data},${escapeCsv(descricao)},${"%.2f".format(valor)},${tipo.name.lowercase()}"
     }
 
     private fun escapeCsv(s: String): String {

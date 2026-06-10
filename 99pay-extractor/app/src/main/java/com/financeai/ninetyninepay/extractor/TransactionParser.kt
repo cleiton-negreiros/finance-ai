@@ -5,12 +5,7 @@ import com.financeai.ninetyninepay.model.Transaction
 class TransactionParser {
 
     private val pattern = Regex(
-        """(\d{2}/\d{2})\s+(.*?)\s*R?\$?\s?([-+]?\d[\d\.,]*\d{2})""",
-        setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)
-    )
-
-    private val limpoPattern = Regex(
-        """(\d{2}/\d{2})""",
+        """(\d{2}[/-]\d{2}(?:[/-]\d{2,4})?)\s+(.*?)\s*([-+]?\s*R?\$?\s*[\d\.,]+)""",
         setOf(RegexOption.MULTILINE)
     )
 
@@ -35,18 +30,18 @@ class TransactionParser {
                 if (match != null) {
                     val data = normalizeDate(match.groupValues[1])
                     val descricao = match.groupValues[2].trim()
-                    val valorStr = match.groupValues[3]
-                        .replace(".", "")
-                        .replace(",", ".")
-                    val valor = valorStr.toDoubleOrNull() ?: continue
+                    val raw = match.groupValues[3].trim()
+                    val hasMinus = raw.startsWith("-")
+                    val clean = raw.replace("-", "").replace("+", "").replace("R", "").replace("$", "").trim()
+                    val valorStr = clean.replace(".", "").replace(",", ".")
+                    val valor = (if (hasMinus) -1 else 1) * (valorStr.toDoubleOrNull() ?: continue)
 
                     val tipo = if (valor < 0) Transaction.Tipo.SAIDA else Transaction.Tipo.ENTRADA
-                    val absValor = kotlin.math.abs(valor)
 
-                    val dedupKey = "${data}_${descricao}_${absValor}"
+                    val dedupKey = "${data}_${descricao}_${kotlin.math.abs(valor)}"
                     if (dedupKey !in seen) {
                         seen.add(dedupKey)
-                        transactions.add(Transaction(data, descricao, absValor, tipo))
+                        transactions.add(Transaction(data, descricao, valor, tipo))
                     }
                 }
             } catch (e: Exception) {
@@ -64,19 +59,29 @@ class TransactionParser {
     }
 
     private fun normalizeDate(dateStr: String): String {
-        val parts = dateStr.split("/")
-        if (parts.size == 2) {
-            val dia = parts[0].padStart(2, '0')
-            val mes = parts[1].padStart(2, '0')
-            val ano = guessYear(mes)
-            return "${ano}-${mes}-${dia}"
+        val clean = dateStr.replace("-", "/")
+        val parts = clean.split("/")
+        return when (parts.size) {
+            2 -> {
+                val dia = parts[0].padStart(2, '0')
+                val mes = parts[1].padStart(2, '0')
+                val ano = guessYear(mes)
+                "${ano}-${mes}-${dia}"
+            }
+            3 -> {
+                val dia = parts[0].padStart(2, '0')
+                val mes = parts[1].padStart(2, '0')
+                val ano = if (parts[2].length == 2) "20${parts[2]}" else parts[2]
+                "${ano}-${mes}-${dia}"
+            }
+            else -> dateStr
         }
-        return dateStr
     }
 
     private fun guessYear(mes: String): String {
-        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1
+        val cal = java.util.Calendar.getInstance()
+        val currentYear = cal.get(java.util.Calendar.YEAR)
+        val currentMonth = cal.get(java.util.Calendar.MONTH) + 1
         val m = mes.toIntOrNull() ?: return currentYear.toString()
         return if (m > currentMonth + 1) (currentYear - 1).toString() else currentYear.toString()
     }

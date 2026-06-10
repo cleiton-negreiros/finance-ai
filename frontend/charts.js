@@ -2,11 +2,13 @@ let charts = {};
 
 const COLORS = ['#7c5cff','#22c55e','#ef4444','#eab308','#3b82f6','#ec4899','#14b8a6','#f97316','#a855f7','#6b7280'];
 
-export function renderCharts(data) {
+function renderCharts(data) {
   renderDonut(data.percentual_por_categoria);
   renderFlow(data.fluxo_mensal, data);
   renderGoals(data);
 }
+
+window.renderCharts = renderCharts;
 
 function destroy(key) {
   if (charts[key]) { charts[key].destroy(); delete charts[key]; }
