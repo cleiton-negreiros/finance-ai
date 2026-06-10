@@ -5,7 +5,7 @@ import com.financeai.ninetyninepay.model.Transaction
 class TransactionParser {
 
     private val pattern = Regex(
-        """(\d{2}[/-]\d{2}(?:[/-]\d{2,4})?)\s+(.*?)\s*([-+]?\s*R?\$?\s*[\d\.,]+)""",
+        """([\s\S]*?)\s*\((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)\s*\*\s*\*(.*?)\*:\s*([-+]?\s*R?\$?\s*[\d\.,]+)""",
         setOf(RegexOption.MULTILINE)
     )
 
@@ -28,9 +28,9 @@ class TransactionParser {
             try {
                 val match = pattern.find(line)
                 if (match != null) {
-                    val data = normalizeDate(match.groupValues[1])
-                    val descricao = match.groupValues[2].trim()
-                    val raw = match.groupValues[3].trim()
+                    val data = match.groupValues[2].trim()
+                    val descricao = match.groupValues[3].trim()
+                    val raw = match.groupValues[4].trim()
                     val hasMinus = raw.startsWith("-")
                     val clean = raw.replace("-", "").replace("+", "").replace("R", "").replace("$", "").trim()
                     val valorStr = clean.replace(".", "").replace(",", ".")
@@ -59,30 +59,20 @@ class TransactionParser {
     }
 
     private fun normalizeDate(dateStr: String): String {
-        val clean = dateStr.replace("-", "/")
-        val parts = clean.split("/")
-        return when (parts.size) {
-            2 -> {
-                val dia = parts[0].padStart(2, '0')
-                val mes = parts[1].padStart(2, '0')
-                val ano = guessYear(mes)
-                "${ano}-${mes}-${dia}"
-            }
-            3 -> {
-                val dia = parts[0].padStart(2, '0')
-                val mes = parts[1].padStart(2, '0')
-                val ano = if (parts[2].length == 2) "20${parts[2]}" else parts[2]
-                "${ano}-${mes}-${dia}"
-            }
-            else -> dateStr
-        }
+        return dateStr
     }
 
-    private fun guessYear(mes: String): String {
-        val cal = java.util.Calendar.getInstance()
-        val currentYear = cal.get(java.util.Calendar.YEAR)
-        val currentMonth = cal.get(java.util.Calendar.MONTH) + 1
-        val m = mes.toIntOrNull() ?: return currentYear.toString()
-        return if (m > currentMonth + 1) (currentYear - 1).toString() else currentYear.toString()
+    fun testParse(): ParseResult {
+        val testText = """*Lucro*: +R$1,20 (2026-06-06 04:52:18)
+*Pagamento com Pix enviado*: -R$1,50 (2026-06-05 16:02:26)
+*Lucro*: +R$1,20 (2026-06-05 05:15:38)
+*Pagamento com Pix enviado*: -R$7,00 (2026-06-04 22:02:27)
+*Lucro*: +R$1,21 (2026-06-04 04:43:50)
+*Pagamento com Pix enviado*: -R$15,00 (2026-06-03 19:59:45)
+*Lucro*: +R$1,21 (2026-06-03 06:05:10)"""
+        
+        return parse(testText)
     }
+
+
 }
