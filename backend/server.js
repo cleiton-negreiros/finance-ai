@@ -61,7 +61,14 @@ app.get('/transacoes', (req, res) => {
   try {
     const db = getDB();
     const limit = parseInt(req.query.limit) || 100;
-    const rows = db.prepare('SELECT * FROM transacoes ORDER BY data DESC, id DESC LIMIT ?').all(limit);
+    const inicio = req.query.inicio || '';
+    const fim = req.query.fim || '';
+    const where = [];
+    const params = [];
+    if (inicio) { where.push('data >= ?'); params.push(inicio); }
+    if (fim) { where.push('data <= ?'); params.push(fim); }
+    const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    const rows = db.prepare(`SELECT * FROM transacoes ${whereSql} ORDER BY data DESC, id DESC LIMIT ?`).all(...params, limit);
     res.json(rows);
   } catch (err) {
     console.error('Erro ao buscar transacoes:', err);
@@ -83,9 +90,18 @@ app.get('/contas', (req, res) => {
 app.get('/resumo', (req, res) => {
   try {
     const db = getDB();
-    const gastos = db.prepare("SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'gasto'").get();
-    const entradas = db.prepare("SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'entrada'").get();
-    const investimentos = db.prepare("SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento'").get();
+    const { inicio, fim } = req.query;
+    const where = ["tipo = ?"];
+    const paramsGasto = ['gasto'];
+    const paramsEntrada = ['entrada'];
+    const paramsInvest = ['investimento'];
+    if (inicio) { where.push('data >= ?'); paramsGasto.push(inicio); paramsEntrada.push(inicio); paramsInvest.push(inicio); }
+    if (fim) { where.push('data <= ?'); paramsGasto.push(fim); paramsEntrada.push(fim); paramsInvest.push(fim); }
+    const whereSql = 'WHERE ' + where.join(' AND ');
+
+    const gastos = db.prepare(`SELECT COALESCE(SUM(valor), 0) as total FROM transacoes ${whereSql}`).get(...paramsGasto);
+    const entradas = db.prepare(`SELECT COALESCE(SUM(valor), 0) as total FROM transacoes ${whereSql}`).get(...paramsEntrada);
+    const investimentos = db.prepare(`SELECT COALESCE(SUM(valor), 0) as total FROM transacoes ${whereSql}`).get(...paramsInvest);
 
     res.json({
       total_gastos: gastos.total,
@@ -101,8 +117,14 @@ app.get('/resumo', (req, res) => {
 
 app.get('/dashboard', (req, res) => {
   try {
-    const consolidado = consolidar();
-    const metricas = calcularMetricas();
+    const { inicio, fim, moeda } = req.query;
+    const filtros = {};
+    if (inicio) filtros.inicio = inicio;
+    if (fim) filtros.fim = fim;
+    if (moeda) filtros.moeda = moeda;
+
+    const consolidado = consolidar(filtros);
+    const metricas = calcularMetricas(filtros);
 
     res.json({
       ...consolidado,

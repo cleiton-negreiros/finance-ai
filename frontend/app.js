@@ -5,12 +5,46 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 document.addEventListener('DOMContentLoaded', () => {
   const isDashboard = window.location.pathname.includes('dashboard');
 
+  populatePeriods();
+
   if (isDashboard) {
     initDashboard();
   } else {
     initUpload();
   }
 });
+
+function populatePeriods() {
+  const sel = document.getElementById('periodSelect');
+  if (!sel) return;
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.toISOString().slice(0, 7);
+    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+}
+
+function getPeriod() {
+  const sel = document.getElementById('periodSelect');
+  if (!sel || !sel.value) return {};
+  const [ano, mes] = sel.value.split('-');
+  const ultimoDia = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+  return {
+    inicio: `${sel.value}-01`,
+    fim: `${sel.value}-${String(ultimoDia).padStart(2, '0')}`,
+  };
+}
+
+function applyPeriod() {
+  const isDashboard = window.location.pathname.includes('dashboard');
+  if (isDashboard) loadDashboard();
+  else { loadTransacoes(); loadResumo(); }
+}
 
 function initUpload() {
   const uploadForm = document.getElementById('uploadForm');
@@ -77,7 +111,9 @@ async function loadTransacoes() {
   tbody.innerHTML = '<tr><td colspan="8" class="loading">Carregando...</td></tr>';
 
   try {
-    const response = await fetch(API_BASE + '/transacoes?limit=100');
+    const period = getPeriod();
+    const params = new URLSearchParams({ limit: 100, ...period });
+    const response = await fetch(API_BASE + '/transacoes?' + params);
     const transacoes = await response.json();
 
     if (!transacoes.length) {
@@ -107,7 +143,9 @@ async function loadTransacoes() {
 
 async function loadResumo() {
   try {
-    const response = await fetch(API_BASE + '/resumo');
+    const period = getPeriod();
+    const params = new URLSearchParams(period);
+    const response = await fetch(API_BASE + '/resumo?' + params);
     const resumo = await response.json();
 
     const elEntradas = document.getElementById('totalEntradas');
@@ -174,7 +212,9 @@ async function initDashboard() {
 
 async function loadDashboard() {
   try {
-    const response = await fetch(API_BASE + '/dashboard');
+    const period = getPeriod();
+    const params = new URLSearchParams({ ...period, moeda: 'BRL' });
+    const response = await fetch(API_BASE + '/dashboard?' + params);
     const data = await response.json();
 
     renderHero(data);

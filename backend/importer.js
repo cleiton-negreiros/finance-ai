@@ -21,7 +21,7 @@ const NORMALIZADORES = {
 };
 
 function gerarHash(transacao) {
-  const raw = `${transacao.data}-${transacao.valor}-${transacao.descricao}-${transacao.fonte}`;
+  const raw = `${transacao.data}-${transacao.valor}-${transacao.descricao}-${transacao.fonte}-${transacao.tipo}-${transacao.conta}`;
   return crypto.createHash('md5').update(raw).digest('hex');
 }
 
@@ -117,6 +117,12 @@ export async function importCSV(filePath, fonte) {
   });
 
   insertMany(processed);
+
+  try {
+    await unlink(filePath);
+  } catch {
+    // Temp file may already be removed
+  }
 
   return {
     total: linhas.length,
