@@ -16,13 +16,14 @@ export function normalize(row, fonte) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  const parts = dateStr.split('-');
+  const clean = dateStr.split(' ')[0];
+  const parts = clean.split('-');
   if (parts.length === 3 && parts[0].length === 4) {
-    return dateStr;
+    return clean;
   }
   const d = new Date(dateStr);
   if (!isNaN(d.getTime())) {
     return d.toISOString().split('T')[0];
   }
-  return dateStr;
+  return clean;
 }

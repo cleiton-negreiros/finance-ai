@@ -33,6 +33,7 @@ async function handleUpload(e) {
   const fileInput = document.getElementById('fileInput');
   const fonteSelect = document.getElementById('fonteSelect');
   const status = document.getElementById('uploadStatus');
+  const form = document.getElementById('uploadForm');
 
   if (!fileInput.files.length) {
     showStatus('Selecione um arquivo CSV', 'error');
@@ -140,11 +141,7 @@ function showStatus(msg, type) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '-';
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-  return dateStr;
+  return dateStr.split(' ')[0];
 }
 
 function formatCurrency(value, moeda) {
