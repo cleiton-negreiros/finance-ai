@@ -3,18 +3,29 @@ import { getDB } from '../db.js';
 const CATEGORIAS_ESSENCIAIS = ['alimentacao', 'moradia', 'transporte', 'saude'];
 const CATEGORIAS_EXTRAS = ['lazer', 'compras', 'streaming', 'delivery'];
 
-function whereClause(inicio, fim, moeda) {
+function tipoWhere(inicio, fim, moeda, tipo = 'gasto') {
   const clauses = ['tipo = ?'];
-  const params = ['gasto'];
+  const params = [tipo];
   if (inicio) { clauses.push('data >= ?'); params.push(inicio); }
   if (fim) { clauses.push('data <= ?'); params.push(fim); }
   if (moeda) { clauses.push('moeda = ?'); params.push(moeda); }
   return { sql: 'WHERE ' + clauses.join(' AND '), params };
 }
 
+function genericWhere(inicio, fim, moeda) {
+  const clauses = [];
+  const params = [];
+  if (inicio) { clauses.push('data >= ?'); params.push(inicio); }
+  if (fim) { clauses.push('data <= ?'); params.push(fim); }
+  if (moeda) { clauses.push('moeda = ?'); params.push(moeda); }
+  const sql = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+  const joinSql = clauses.length ? 'AND ' + clauses.join(' AND ') : '';
+  return { sql, joinSql, params };
+}
+
 export function calcularMetricas({ inicio, fim, moeda } = {}) {
   const db = getDB();
-  const w = whereClause(inicio, fim, moeda);
+  const w = tipoWhere(inicio, fim, moeda);
 
   const gastosPorCategoria = db.prepare(`
     SELECT
@@ -42,27 +53,23 @@ export function calcularMetricas({ inicio, fim, moeda } = {}) {
     .filter(r => CATEGORIAS_EXTRAS.includes(r.cat))
     .reduce((acc, r) => acc + r.total, 0);
 
-  let investWhere = moeda ? "AND moeda = ?" : "";
-  const investParams = [];
-  if (moeda) investParams.push(moeda);
-  if (inicio) { investWhere += " AND data >= ?"; investParams.push(inicio); }
-  if (fim) { investWhere += " AND data <= ?"; investParams.push(fim); }
-
+  const iw = genericWhere(inicio, fim, moeda);
   const investido = db.prepare(`
-    SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento' ${investWhere}
-  `).get(...investParams).total;
+    SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento' ${iw.joinSql}
+  `).get(...iw.params).total;
 
+  const fw = genericWhere(inicio, fim, moeda);
   const fluxoMensal = db.prepare(`
     SELECT
       strftime('%Y-%m', data) as mes,
       SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as entradas,
       SUM(CASE WHEN tipo = 'gasto' THEN valor ELSE 0 END) as gastos
     FROM transacoes
-    ${moeda ? "WHERE moeda = ?" : ""}
+    ${fw.sql}
     GROUP BY mes
     ORDER BY mes DESC
     LIMIT 12
-  `).all(...(moeda ? [moeda] : []));
+  `).all(...fw.params);
 
   return {
     custo_vida: custoVida,
@@ -70,5 +77,94 @@ export function calcularMetricas({ inicio, fim, moeda } = {}) {
     investido: investido,
     percentual_por_categoria: percentualPorCategoria,
     fluxo_mensal: fluxoMensal,
+  };
+}
+
+export function calcularInvestimentos({ inicio, fim, moeda } = {}) {
+  const db = getDB();
+  const fw = genericWhere(inicio, fim, moeda);
+
+  const total = db.prepare(`
+    SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento' ${fw.joinSql}
+  `).get(...fw.params).total;
+
+  const porTipo = db.prepare(`
+    SELECT COALESCE(categoria, 'outros') as tipo, SUM(valor) as total
+    FROM transacoes WHERE tipo = 'investimento' ${fw.joinSql}
+    GROUP BY tipo ORDER BY total DESC
+  `).all(...fw.params);
+
+  const porConta = db.prepare(`
+    SELECT conta, SUM(valor) as total
+    FROM transacoes WHERE tipo = 'investimento' ${fw.joinSql}
+    GROUP BY conta ORDER BY total DESC
+  `).all(...fw.params);
+
+  return { total, por_tipo: porTipo, por_conta: porConta };
+}
+
+export function patrimonioEvolucao({ inicio, fim, moeda } = {}) {
+  const db = getDB();
+  const fw = genericWhere(inicio, fim, moeda);
+
+  const meses = db.prepare(`
+    SELECT
+      strftime('%Y-%m', data) as mes,
+      SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as entradas,
+      SUM(CASE WHEN tipo = 'gasto' THEN valor ELSE 0 END) as gastos,
+      SUM(CASE WHEN tipo = 'investimento' THEN valor ELSE 0 END) as investido
+    FROM transacoes
+    ${fw.sql}
+    GROUP BY mes
+    ORDER BY mes
+  `).all(...fw.params);
+
+  let accSaldo = 0, accInvest = 0;
+  const evolucao = meses.map(r => {
+    accSaldo += (r.entradas || 0) - (r.gastos || 0);
+    accInvest += (r.investido || 0);
+    return {
+      mes: r.mes,
+      saldo: accSaldo,
+      investido: accInvest,
+      patrimonio: accSaldo + accInvest,
+    };
+  });
+
+  return { evolucao };
+}
+
+function tipoWhereFilter(tipo, inicio, fim, moeda) {
+  const clauses = ['tipo = ?'];
+  const params = [tipo];
+  if (inicio) { clauses.push('data >= ?'); params.push(inicio); }
+  if (fim) { clauses.push('data <= ?'); params.push(fim); }
+  if (moeda) { clauses.push('moeda = ?'); params.push(moeda); }
+  return { sql: 'WHERE ' + clauses.join(' AND '), params };
+}
+
+export function categoriasPorTipo({ inicio, fim, moeda } = {}) {
+  const db = getDB();
+  const gw = tipoWhereFilter('gasto', inicio, fim, moeda);
+  const rw = tipoWhereFilter('entrada', inicio, fim, moeda);
+
+  const gastos = db.prepare(`
+    SELECT COALESCE(categoria, 'outros') as categoria, SUM(valor) as total
+    FROM transacoes ${gw.sql} GROUP BY categoria ORDER BY total DESC
+  `).all(...gw.params);
+
+  const receitas = db.prepare(`
+    SELECT COALESCE(categoria, 'outros') as categoria, SUM(valor) as total
+    FROM transacoes ${rw.sql} GROUP BY categoria ORDER BY total DESC
+  `).all(...rw.params);
+
+  const totalGastos = gastos.reduce((a, r) => a + r.total, 0);
+  const totalReceitas = receitas.reduce((a, r) => a + r.total, 0);
+
+  return {
+    gastos: gastos.map(r => ({ ...r, percentual: totalGastos > 0 ? Math.round((r.total / totalGastos) * 100) : 0 })),
+    receitas: receitas.map(r => ({ ...r, percentual: totalReceitas > 0 ? Math.round((r.total / totalReceitas) * 100) : 0 })),
+    total_gastos: totalGastos,
+    total_receitas: totalReceitas,
   };
 }

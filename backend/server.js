@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { initDB, getDB } from './db.js';
 import { importCSV } from './importer.js';
 import { consolidar } from './engine/consolidator.js';
-import { calcularMetricas } from './engine/metrics.js';
+import { calcularMetricas, calcularInvestimentos, patrimonioEvolucao, categoriasPorTipo } from './engine/metrics.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -132,6 +132,40 @@ app.get('/dashboard', (req, res) => {
     });
   } catch (err) {
     console.error('Erro ao gerar dashboard:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/investimentos', (req, res) => {
+  try {
+    const { inicio, fim, moeda } = req.query;
+    const filtros = {};
+    if (inicio) filtros.inicio = inicio;
+    if (fim) filtros.fim = fim;
+    if (moeda) filtros.moeda = moeda;
+
+    const invest = calcularInvestimentos(filtros);
+    const patr = patrimonioEvolucao(filtros);
+
+    res.json({ ...invest, ...patr });
+  } catch (err) {
+    console.error('Erro ao gerar investimentos:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/categorias', (req, res) => {
+  try {
+    const { inicio, fim, moeda } = req.query;
+    const filtros = {};
+    if (inicio) filtros.inicio = inicio;
+    if (fim) filtros.fim = fim;
+    if (moeda) filtros.moeda = moeda;
+
+    const categorias = categoriasPorTipo(filtros);
+    res.json(categorias);
+  } catch (err) {
+    console.error('Erro ao buscar categorias:', err);
     res.status(500).json({ error: err.message });
   }
 });

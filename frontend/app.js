@@ -3,11 +3,15 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
   : 'http://localhost:3000';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const isDashboard = window.location.pathname.includes('dashboard');
+  const path = window.location.pathname;
 
   populatePeriods();
 
-  if (isDashboard) {
+  if (path.includes('categorias')) {
+    initCategorias();
+  } else if (path.includes('investimentos')) {
+    initInvest();
+  } else if (path.includes('dashboard')) {
     initDashboard();
   } else {
     initUpload();
@@ -41,8 +45,10 @@ function getPeriod() {
 }
 
 function applyPeriod() {
-  const isDashboard = window.location.pathname.includes('dashboard');
-  if (isDashboard) loadDashboard();
+  const path = window.location.pathname;
+  if (path.includes('categorias')) loadCategorias();
+  else if (path.includes('investimentos')) loadInvest();
+  else if (path.includes('dashboard')) loadDashboard();
   else { loadTransacoes(); loadResumo(); }
 }
 
@@ -225,8 +231,22 @@ async function loadDashboard() {
     if (typeof renderCharts === 'function') {
       renderCharts(data);
     }
+
+    loadReceitasDashboard();
   } catch (err) {
     console.error('Erro ao carregar dashboard:', err);
+  }
+}
+
+async function loadReceitasDashboard() {
+  try {
+    const period = getPeriod();
+    const params = new URLSearchParams(period);
+    const response = await fetch(API_BASE + '/categorias?' + params);
+    const data = await response.json();
+    renderCategoriaTable('receitasBody', data.receitas, formatCurrency);
+  } catch (err) {
+    console.error('Erro ao carregar receitas do dashboard:', err);
   }
 }
 
@@ -315,4 +335,176 @@ function renderCategorias(categorias) {
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
+}
+
+/* ===== INVESTIMENTOS ===== */
+
+async function initInvest() {
+  const refreshBtn = document.getElementById('refreshInvest');
+  if (refreshBtn) refreshBtn.addEventListener('click', loadInvest);
+  await loadInvest();
+}
+
+async function loadInvest() {
+  try {
+    const period = getPeriod();
+    const params = new URLSearchParams({ ...period, moeda: 'BRL' });
+    const response = await fetch(API_BASE + '/investimentos?' + params);
+    const data = await response.json();
+
+    const total = data.total || 0;
+    setText('heroInvestido', formatCurrency(total));
+
+    const evol = data.evolucao || [];
+    const ultimo = evol.length > 0 ? evol[evol.length - 1] : null;
+    if (ultimo) {
+      setText('kpiPatrimonio', formatCurrency(ultimo.patrimonio));
+      setText('kpiSaldo', formatCurrency(ultimo.saldo));
+    } else {
+      setText('kpiPatrimonio', formatCurrency(0));
+      setText('kpiSaldo', formatCurrency(0));
+    }
+
+    if (evol.length >= 2) {
+      const prev = evol[evol.length - 2];
+      const variacao = prev.patrimonio > 0 ? ((ultimo.patrimonio - prev.patrimonio) / prev.patrimonio * 100) : 0;
+      const elEvol = document.getElementById('kpiEvolucao');
+      if (elEvol) {
+        elEvol.textContent = `${variacao >= 0 ? '+' : ''}${variacao.toFixed(1)}%`;
+        elEvol.style.color = variacao >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+    } else {
+      const elEvol = document.getElementById('kpiEvolucao');
+      if (elEvol) { elEvol.textContent = '--'; elEvol.style.color = ''; }
+    }
+
+    renderInvestTipo(data.por_tipo);
+    renderInvestConta(data.por_conta);
+    renderEvolucaoTable(evol);
+
+    if (typeof renderEvolucao === 'function') {
+      renderEvolucao(evol);
+    }
+  } catch (err) {
+    console.error('Erro ao carregar investimentos:', err);
+  }
+}
+
+function renderInvestTipo(porTipo) {
+  const tbody = document.getElementById('investTipoBody');
+  if (!tbody) return;
+
+  if (!porTipo || !porTipo.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Nenhum investimento encontrado</td></tr>';
+    return;
+  }
+
+  const total = porTipo.reduce((acc, r) => acc + (r.total || 0), 0);
+
+  tbody.innerHTML = porTipo.map(r => {
+    const pct = total > 0 ? ((r.total / total) * 100) : 0;
+    return `<tr>
+      <td>${capitalize(r.tipo)}</td>
+      <td class="cat-value">${formatCurrency(r.total)}</td>
+      <td class="cat-pct">${pct.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderInvestConta(porConta) {
+  const tbody = document.getElementById('investContaBody');
+  if (!tbody) return;
+
+  if (!porConta || !porConta.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Nenhum investimento encontrado</td></tr>';
+    return;
+  }
+
+  const total = porConta.reduce((acc, r) => acc + (r.total || 0), 0);
+
+  tbody.innerHTML = porConta.map(r => {
+    const pct = total > 0 ? ((r.total / total) * 100) : 0;
+    return `<tr>
+      <td>${escapeHtml(r.conta)}</td>
+      <td class="cat-value">${formatCurrency(r.total)}</td>
+      <td class="cat-pct">${pct.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderEvolucaoTable(evolucao) {
+  const tbody = document.getElementById('evolucaoBody');
+  if (!tbody) return;
+
+  if (!evolucao || !evolucao.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">Sem dados de evolução</td></tr>';
+    return;
+  }
+
+  const reversed = [...evolucao].reverse();
+
+  tbody.innerHTML = reversed.map((e, i) => {
+    const variacao = i > 0 ? ((e.patrimonio - reversed[i - 1].patrimonio) / reversed[i - 1].patrimonio * 100) : 0;
+    const varClass = variacao >= 0 ? 'valor-entrada' : 'valor-gasto';
+    const varSignal = variacao >= 0 ? '+' : '';
+    return `<tr>
+      <td>${e.mes}</td>
+      <td class="cat-value valor-entrada">${formatCurrency(e.saldo)}</td>
+      <td class="cat-value valor-investimento">${formatCurrency(e.investido)}</td>
+      <td class="cat-value" style="color:var(--yellow)">${formatCurrency(e.patrimonio)}</td>
+      <td class="cat-value ${varClass}">${varSignal}${variacao.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== CATEGORIAS ===== */
+
+async function initCategorias() {
+  const refreshBtn = document.getElementById('refreshCategorias');
+  if (refreshBtn) refreshBtn.addEventListener('click', loadCategorias);
+  await loadCategorias();
+}
+
+async function loadCategorias() {
+  try {
+    const period = getPeriod();
+    const params = new URLSearchParams(period);
+    const response = await fetch(API_BASE + '/categorias?' + params);
+    const data = await response.json();
+
+    setText('kpiTotalGastos', formatCurrency(data.total_gastos));
+    setText('kpiTotalReceitas', formatCurrency(data.total_receitas));
+
+    renderCategoriaTable('catGastosBody', data.gastos, formatCurrency);
+    renderCategoriaTable('catReceitasBody', data.receitas, formatCurrency);
+
+    if (typeof renderCatBar === 'function') {
+      renderCatBar('chartCatGastos', data.gastos, () => '#ef4444');
+      renderCatBar('chartCatReceitas', data.receitas, () => '#22c55e');
+    }
+  } catch (err) {
+    console.error('Erro ao carregar categorias:', err);
+  }
+}
+
+function renderCategoriaTable(tbodyId, categorias, fmtFn) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!categorias || !categorias.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Nenhum dado no período</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = categorias.map(c => {
+    const pct = c.percentual || 0;
+    return `<tr>
+      <td>${capitalize(c.categoria)}</td>
+      <td class="cat-value">${fmtFn(c.total)}</td>
+      <td class="cat-pct">
+        ${pct}%
+        <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.min(pct, 100)}%"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
 }

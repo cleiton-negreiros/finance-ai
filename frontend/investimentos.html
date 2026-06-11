@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#7c5cfc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="/icons/icon-512.svg">
+  <title>Finance AI — Investimentos</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">$</div>
+        <div>
+          <div class="header-title">Finance AI</div>
+          <div class="header-sub">Investimentos & Patrimonio</div>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Upload</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+        <a href="/investimentos.html" class="nav-link active">Investimentos</a>
+      </nav>
+    </header>
+
+    <div class="period-filter" style="margin-bottom:20px">
+      <label for="periodSelect">Período</label>
+      <select id="periodSelect" onchange="applyPeriod()">
+        <option value="">Tudo</option>
+      </select>
+    </div>
+
+    <section class="hero">
+      <div class="hero-label">Total Investido</div>
+      <div class="hero-balance" id="heroInvestido">R$ 0,00</div>
+      <div class="hero-change" id="heroChange"></div>
+    </section>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Patrimônio Líquido</div>
+        <div class="kpi-value accent" id="kpiPatrimonio">R$ 0,00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo Disponível</div>
+        <div class="kpi-value green" id="kpiSaldo">R$ 0,00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Evolução (último mês)</div>
+        <div class="kpi-value" id="kpiEvolucao">--</div>
+      </div>
+    </div>
+
+    <!-- Alocação -->
+    <div class="dashboard-grid">
+      <section class="card">
+        <h3>Por Tipo de Investimento</h3>
+        <div class="table-wrapper">
+          <table id="investTipoTable">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="investTipoBody">
+              <tr><td colspan="3" class="loading">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card">
+        <h3>Por Conta</h3>
+        <div class="table-wrapper">
+          <table id="investContaTable">
+            <thead>
+              <tr>
+                <th>Conta</th>
+                <th>Valor</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="investContaBody">
+              <tr><td colspan="3" class="loading">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Patromônio Evolution Chart -->
+    <section class="card flow-section">
+      <h3>Evolução Mensal do Patrimônio</h3>
+      <div class="chart-container chart-full">
+        <canvas id="chartPatrimonio"></canvas>
+      </div>
+    </section>
+
+    <!-- Patromônio Evolution Table -->
+    <section class="card">
+      <h3>Detalhamento Mensal</h3>
+      <div class="table-wrapper">
+        <table id="evolucaoTable">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Saldo</th>
+              <th>Investido</th>
+              <th>Patrimônio</th>
+              <th>Variação</th>
+            </tr>
+          </thead>
+          <tbody id="evolucaoBody">
+            <tr><td colspan="5" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="action-bar">
+      <button id="refreshInvest" class="btn btn-primary">
+        <span class="btn-icon">&#x21bb;</span> Atualizar
+      </button>
+    </div>
+  </div>
+
+  <script src="invest-charts.js"></script>
+  <script src="app.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+</body>
+</html>

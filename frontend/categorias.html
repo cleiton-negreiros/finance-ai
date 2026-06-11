@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#7c5cfc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="/icons/icon-512.svg">
+  <title>Finance AI — Categorias</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">$</div>
+        <div>
+          <div class="header-title">Finance AI</div>
+          <div class="header-sub">Gastos & Receitas por Categoria</div>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Upload</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+        <a href="/investimentos.html" class="nav-link">Investimentos</a>
+        <a href="/categorias.html" class="nav-link active">Categorias</a>
+      </nav>
+    </header>
+
+    <div class="period-filter" style="margin-bottom:20px">
+      <label for="periodSelect">Período</label>
+      <select id="periodSelect" onchange="applyPeriod()">
+        <option value="">Tudo</option>
+      </select>
+    </div>
+
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Gastos</div>
+        <div class="kpi-value red" id="kpiTotalGastos">R$ 0,00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total Receitas</div>
+        <div class="kpi-value green" id="kpiTotalReceitas">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- Gastos -->
+      <section class="card">
+        <h3>Gastos por Categoria</h3>
+        <div class="table-wrapper">
+          <table id="catGastosTable">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="catGastosBody">
+              <tr><td colspan="3" class="loading">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-container chart-full" style="margin-top:16px">
+          <canvas id="chartCatGastos"></canvas>
+        </div>
+      </section>
+
+      <!-- Receitas -->
+      <section class="card">
+        <h3>Receitas por Categoria</h3>
+        <div class="table-wrapper">
+          <table id="catReceitasTable">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="catReceitasBody">
+              <tr><td colspan="3" class="loading">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-container chart-full" style="margin-top:16px">
+          <canvas id="chartCatReceitas"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <div class="action-bar">
+      <button id="refreshCategorias" class="btn btn-primary">
+        <span class="btn-icon">&#x21bb;</span> Atualizar
+      </button>
+    </div>
+  </div>
+
+  <script src="cat-charts.js"></script>
+  <script src="app.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+</body>
+</html>
