@@ -55,6 +55,7 @@ function applyPeriod() {
 function initUpload() {
   const uploadForm = document.getElementById('uploadForm');
   const refreshBtn = document.getElementById('refreshBtn');
+  const addBtn = document.getElementById('addTransacaoBtn');
 
   if (API_BASE) {
     document.getElementById('apiWarning').style.display = 'block';
@@ -62,9 +63,11 @@ function initUpload() {
 
   uploadForm.addEventListener('submit', handleUpload);
   refreshBtn.addEventListener('click', loadTransacoes);
+  if (addBtn) addBtn.addEventListener('click', openAdd);
 
   loadTransacoes();
   loadResumo();
+  loadSelectOptions();
 }
 
 async function handleUpload(e) {
@@ -114,7 +117,7 @@ async function handleUpload(e) {
 async function loadTransacoes() {
   const tbody = document.getElementById('transacoesBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8" class="loading">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="loading">Carregando...</td></tr>';
 
   try {
     const period = getPeriod();
@@ -123,7 +126,7 @@ async function loadTransacoes() {
     const transacoes = await response.json();
 
     if (!transacoes.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="loading">Nenhuma transacao encontrada</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading">Nenhuma transacao encontrada</td></tr>';
       return;
     }
 
@@ -140,10 +143,14 @@ async function loadTransacoes() {
         <td data-label="Moeda">${t.moeda}</td>
         <td data-label="Descricao">${escapeHtml(t.descricao || '-')}</td>
         <td data-label="Categoria">${capitalize(t.categoria || 'outros')}</td>
+        <td data-label="Acoes">
+          <button class="btn-icon-sm edit" onclick="openEdit(${t.id})" title="Editar">&#9998;</button>
+          <button class="btn-icon-sm delete" onclick="deleteTransacao(${t.id})" title="Excluir">&times;</button>
+        </td>
       </tr>`;
     }).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" class="loading error-text">Erro ao carregar: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="loading error-text">Erro ao carregar: ${err.message}</td></tr>`;
   }
 }
 
@@ -507,4 +514,110 @@ function renderCategoriaTable(tbodyId, categorias, fmtFn) {
       </td>
     </tr>`;
   }).join('');
+}
+
+/* ===== MODAL CRUD ===== */
+
+async function loadSelectOptions() {
+  try {
+    const [contasRes, catsRes] = await Promise.all([
+      fetch(API_BASE + '/contas'),
+      fetch(API_BASE + '/categorias-list'),
+    ]);
+    const contas = await contasRes.json();
+    const cats = await catsRes.json();
+
+    const contasList = document.getElementById('contasList');
+    if (contasList) contasList.innerHTML = contas.map(c => `<option value="${escapeHtml(c.nome)}">`).join('');
+
+    const catsList = document.getElementById('catsList');
+    if (catsList) catsList.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join('');
+  } catch (err) {
+    console.error('Erro ao carregar opcoes:', err);
+  }
+}
+
+function openAdd() {
+  document.getElementById('editId').value = '';
+  document.getElementById('modalTitle').textContent = 'Nova Transacao';
+  document.getElementById('transacaoForm').reset();
+  document.getElementById('modalData').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('modalValor').value = '';
+  document.getElementById('modalDescricao').value = '';
+  document.getElementById('transacaoModal').style.display = 'flex';
+}
+
+async function openEdit(id) {
+  try {
+    const response = await fetch(API_BASE + '/transacoes?limit=1000');
+    const transacoes = await response.json();
+    const t = transacoes.find(x => x.id === id);
+    if (!t) return;
+
+    document.getElementById('editId').value = t.id;
+    document.getElementById('modalTitle').textContent = 'Editar Transacao';
+    document.getElementById('modalData').value = t.data.split(' ')[0];
+    document.getElementById('modalTipo').value = t.tipo;
+    document.getElementById('modalValor').value = t.valor;
+    document.getElementById('modalMoeda').value = t.moeda;
+    document.getElementById('modalConta').value = t.conta;
+    document.getElementById('modalCategoria').value = t.categoria || '';
+    document.getElementById('modalDescricao').value = t.descricao || '';
+    document.getElementById('transacaoModal').style.display = 'flex';
+  } catch (err) {
+    console.error('Erro ao abrir edicao:', err);
+  }
+}
+
+function closeModal() {
+  document.getElementById('transacaoModal').style.display = 'none';
+}
+
+async function saveTransaction(e) {
+  e.preventDefault();
+  const id = document.getElementById('editId').value;
+  const data = document.getElementById('modalData').value;
+  const tipo = document.getElementById('modalTipo').value;
+  const valor = document.getElementById('modalValor').value;
+  const moeda = document.getElementById('modalMoeda').value;
+  const conta = document.getElementById('modalConta').value.trim();
+  const categoria = document.getElementById('modalCategoria').value.trim() || 'outros';
+  const descricao = document.getElementById('modalDescricao').value.trim();
+
+  const body = { data, tipo, valor, moeda, conta, categoria, descricao, fonte: 'manual' };
+
+  try {
+    const url = id ? API_BASE + '/transacoes/' + id : API_BASE + '/transacoes';
+    const method = id ? 'PUT' : 'POST';
+    const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    if (!response.ok) {
+      const err = await response.json();
+      alert('Erro: ' + (err.error || 'Falha ao salvar'));
+      return;
+    }
+
+    closeModal();
+    loadTransacoes();
+    loadResumo();
+  } catch (err) {
+    alert('Erro ao salvar: ' + err.message);
+  }
+}
+
+async function deleteTransacao(id) {
+  if (!confirm('Tem certeza que deseja excluir esta transacao?')) return;
+
+  try {
+    const response = await fetch(API_BASE + '/transacoes/' + id, { method: 'DELETE' });
+    if (!response.ok) {
+      const err = await response.json();
+      alert('Erro: ' + (err.error || 'Falha ao excluir'));
+      return;
+    }
+    loadTransacoes();
+    loadResumo();
+  } catch (err) {
+    alert('Erro ao excluir: ' + err.message);
+  }
 }

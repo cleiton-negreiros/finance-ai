@@ -3,7 +3,7 @@ import multer from 'multer';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { initDB, getDB } from './db.js';
-import { importCSV } from './importer.js';
+import { importCSV, gerarHash } from './importer.js';
 import { consolidar } from './engine/consolidator.js';
 import { calcularMetricas, calcularInvestimentos, patrimonioEvolucao, categoriasPorTipo } from './engine/metrics.js';
 
@@ -25,7 +25,7 @@ const upload = multer({ storage });
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
@@ -166,6 +166,119 @@ app.get('/categorias', (req, res) => {
     res.json(categorias);
   } catch (err) {
     console.error('Erro ao buscar categorias:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/categorias-list', (req, res) => {
+  try {
+    const db = getDB();
+    const rows = db.prepare("SELECT DISTINCT categoria FROM transacoes WHERE categoria IS NOT NULL AND categoria != '' ORDER BY categoria").all();
+    res.json(rows.map(r => r.categoria));
+  } catch (err) {
+    console.error('Erro ao buscar lista de categorias:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/transacoes', (req, res) => {
+  try {
+    const { data, tipo, valor, moeda, conta, descricao, categoria, fonte } = req.body;
+
+    if (!data || !tipo || valor === undefined || valor === null) {
+      return res.status(400).json({ error: 'Campos obrigatorios: data, tipo, valor' });
+    }
+
+    const db = getDB();
+    const transacao = {
+      data,
+      tipo,
+      valor: parseFloat(valor),
+      moeda: (moeda || 'BRL').toUpperCase(),
+      conta: conta || 'Manual',
+      descricao: descricao || '',
+      categoria: categoria || 'outros',
+      fonte: fonte || 'manual',
+    };
+
+    transacao.hash = gerarHash(transacao);
+
+    const stmt = db.prepare(`
+      INSERT INTO transacoes (fonte, conta, tipo, valor, moeda, descricao, categoria, data, hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const info = stmt.run(transacao.fonte, transacao.conta, transacao.tipo, transacao.valor,
+      transacao.moeda, transacao.descricao, transacao.categoria, transacao.data, transacao.hash);
+
+    const inserted = db.prepare('SELECT * FROM transacoes WHERE id = ?').get(info.lastInsertRowid);
+
+    res.status(201).json(inserted);
+  } catch (err) {
+    if (err.message && err.message.includes('UNIQUE')) {
+      return res.status(409).json({ error: 'Transacao duplicada (ja existe)' });
+    }
+    console.error('Erro ao criar transacao:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/transacoes/:id', (req, res) => {
+  try {
+    const db = getDB();
+    const id = parseInt(req.params.id);
+
+    const existing = db.prepare('SELECT * FROM transacoes WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Transacao nao encontrada' });
+    }
+
+    const { data, tipo, valor, moeda, conta, descricao, categoria, fonte } = req.body;
+
+    const atualizada = {
+      data: data || existing.data,
+      tipo: tipo || existing.tipo,
+      valor: valor !== undefined ? parseFloat(valor) : existing.valor,
+      moeda: moeda ? moeda.toUpperCase() : existing.moeda,
+      conta: conta || existing.conta,
+      descricao: descricao !== undefined ? descricao : existing.descricao,
+      categoria: categoria || existing.categoria,
+      fonte: fonte || existing.fonte,
+    };
+
+    atualizada.hash = gerarHash(atualizada);
+
+    db.prepare(`
+      UPDATE transacoes SET fonte=?, conta=?, tipo=?, valor=?, moeda=?, descricao=?, categoria=?, data=?, hash=?
+      WHERE id=?
+    `).run(atualizada.fonte, atualizada.conta, atualizada.tipo, atualizada.valor,
+      atualizada.moeda, atualizada.descricao, atualizada.categoria, atualizada.data, atualizada.hash, id);
+
+    const updated = db.prepare('SELECT * FROM transacoes WHERE id = ?').get(id);
+    res.json(updated);
+  } catch (err) {
+    if (err.message && err.message.includes('UNIQUE')) {
+      return res.status(409).json({ error: 'Transacao duplicada apos edicao' });
+    }
+    console.error('Erro ao atualizar transacao:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/transacoes/:id', (req, res) => {
+  try {
+    const db = getDB();
+    const id = parseInt(req.params.id);
+
+    const existing = db.prepare('SELECT * FROM transacoes WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Transacao nao encontrada' });
+    }
+
+    db.prepare('DELETE FROM transacoes WHERE id = ?').run(id);
+    res.json({ message: 'Transacao excluida', id });
+  } catch (err) {
+    console.error('Erro ao excluir transacao:', err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -20,7 +20,7 @@ const NORMALIZADORES = {
   '99pay': normalize99Pay,
 };
 
-function gerarHash(transacao) {
+export function gerarHash(transacao) {
   const raw = `${transacao.data}-${transacao.valor}-${transacao.descricao}-${transacao.fonte}-${transacao.tipo}-${transacao.conta}`;
   return crypto.createHash('md5').update(raw).digest('hex');
 }
