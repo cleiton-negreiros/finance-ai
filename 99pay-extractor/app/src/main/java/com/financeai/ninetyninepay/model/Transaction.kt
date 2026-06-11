@@ -1,5 +1,7 @@
 package com.financeai.ninetyninepay.model
 
+import java.util.Locale
+
 data class Transaction(
     val data: String,
     val descricao: String,
@@ -9,7 +11,7 @@ data class Transaction(
     enum class Tipo { ENTRADA, SAIDA }
 
     fun toCSV(): String {
-        return "${data},${escapeCsv(descricao)},${"%.2f".format(valor)},${tipo.name.lowercase()}"
+        return "${data},${escapeCsv(descricao)},${"%.2f".format(Locale.US, valor)},${tipo.name.lowercase()}"
     }
 
     private fun escapeCsv(s: String): String {
