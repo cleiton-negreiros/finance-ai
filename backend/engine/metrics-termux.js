@@ -1,25 +1,59 @@
 import { getDB } from '../db-termux.js';
 
-const CATEGORIAS_ESSENCIAIS = ['alimentacao', 'moradia', 'contas', 'transporte', 'saude'];
-const CATEGORIAS_EXTRAS = ['lazer', 'compras', 'streaming', 'assinaturas'];
+const CATEGORIAS_ESSENCIAIS = ['alimentacao', 'moradia', 'transporte', 'saude'];
+const CATEGORIAS_EXTRAS = ['lazer', 'compras', 'streaming', 'delivery'];
 
-export function calcularMetricas() {
+function execSQL(sql, params = []) {
   const db = getDB();
+  const result = db.exec(sql);
+  return result[0]?.values || [];
+}
 
-  const gastosPorCategoriaResult = db.exec(`
-    SELECT
-      CASE WHEN categoria IS NULL OR categoria = '' THEN 'outros' ELSE categoria END as cat,
-      SUM(valor) as total
-    FROM transacoes
-    WHERE tipo = 'gasto'
-    GROUP BY cat
-    ORDER BY total DESC
-  `);
+function tipoWhere(inicio, fim, moeda, tipo = 'gasto') {
+  const clauses = ["tipo = ?"];
+  const params = [tipo];
+  if (inicio) { clauses.push("data >= ?"); params.push(inicio); }
+  if (fim) { clauses.push("data <= ?"); params.push(fim); }
+  if (moeda) { clauses.push("moeda = ?"); params.push(moeda); }
+  return { sql: 'WHERE ' + clauses.join(' AND '), params };
+}
 
-  const gastosPorCategoria = gastosPorCategoriaResult[0]?.values.map(row => ({
-    cat: row[0],
-    total: row[1],
-  })) || [];
+function genericWhere(inicio, fim, moeda) {
+  const clauses = [];
+  const params = [];
+  if (inicio) { clauses.push("data >= ?"); params.push(inicio); }
+  if (fim) { clauses.push("data <= ?"); params.push(fim); }
+  if (moeda) { clauses.push("moeda = ?"); params.push(moeda); }
+  const sql = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+  const joinSql = clauses.length ? 'AND ' + clauses.join(' AND ') : '';
+  return { sql, joinSql, params };
+}
+
+function typedExec(sql, params = []) {
+  const db = getDB();
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return rows;
+}
+
+function typedGet(sql, params = []) {
+  const rows = typedExec(sql, params);
+  return rows[0] || { total: 0 };
+}
+
+export function calcularMetricas({ inicio, fim, moeda } = {}) {
+  const w = tipoWhere(inicio, fim, moeda);
+
+  const gastosPorCategoria = typedExec(
+    `SELECT CASE WHEN categoria IS NULL OR categoria = '' THEN 'outros' ELSE categoria END as cat, SUM(valor) as total
+     FROM transacoes ${w.sql} GROUP BY cat ORDER BY total DESC`,
+    w.params
+  );
 
   const totalGastos = gastosPorCategoria.reduce((acc, r) => acc + r.total, 0);
 
@@ -37,28 +71,20 @@ export function calcularMetricas() {
     .filter(r => CATEGORIAS_EXTRAS.includes(r.cat))
     .reduce((acc, r) => acc + r.total, 0);
 
-  const investidoResult = db.exec(`
-    SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento'
-  `);
+  const iw = genericWhere(inicio, fim, moeda);
+  const investido = typedGet(
+    `SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento' ${iw.joinSql}`,
+    iw.params
+  ).total;
 
-  const investido = investidoResult[0]?.values[0]?.[0] || 0;
-
-  const fluxoMensalResult = db.exec(`
-    SELECT
-      strftime('%Y-%m', data) as mes,
-      SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as entradas,
-      SUM(CASE WHEN tipo = 'gasto' THEN valor ELSE 0 END) as gastos
-    FROM transacoes
-    GROUP BY mes
-    ORDER BY mes DESC
-    LIMIT 12
-  `);
-
-  const fluxoMensal = fluxoMensalResult[0]?.values.map(row => ({
-    mes: row[0],
-    entradas: row[1],
-    gastos: row[2],
-  })) || [];
+  const fw = genericWhere(inicio, fim, moeda);
+  const fluxoMensal = typedExec(
+    `SELECT strftime('%Y-%m', data) as mes,
+       SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as entradas,
+       SUM(CASE WHEN tipo = 'gasto' THEN valor ELSE 0 END) as gastos
+     FROM transacoes ${fw.sql} GROUP BY mes ORDER BY mes DESC LIMIT 12`,
+    fw.params
+  );
 
   return {
     custo_vida: custoVida,
@@ -66,5 +92,91 @@ export function calcularMetricas() {
     investido: investido,
     percentual_por_categoria: percentualPorCategoria,
     fluxo_mensal: fluxoMensal,
+  };
+}
+
+export function calcularInvestimentos({ inicio, fim, moeda } = {}) {
+  const fw = genericWhere(inicio, fim, moeda);
+
+  const total = typedGet(
+    `SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'investimento' ${fw.joinSql}`,
+    fw.params
+  ).total;
+
+  const porTipo = typedExec(
+    `SELECT COALESCE(categoria, 'outros') as tipo, SUM(valor) as total
+     FROM transacoes WHERE tipo = 'investimento' ${fw.joinSql} GROUP BY tipo ORDER BY total DESC`,
+    fw.params
+  );
+
+  const porConta = typedExec(
+    `SELECT conta, SUM(valor) as total
+     FROM transacoes WHERE tipo = 'investimento' ${fw.joinSql} GROUP BY conta ORDER BY total DESC`,
+    fw.params
+  );
+
+  return { total, por_tipo: porTipo, por_conta: porConta };
+}
+
+export function patrimonioEvolucao({ inicio, fim, moeda } = {}) {
+  const fw = genericWhere(inicio, fim, moeda);
+
+  const meses = typedExec(
+    `SELECT strftime('%Y-%m', data) as mes,
+       SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as entradas,
+       SUM(CASE WHEN tipo = 'gasto' THEN valor ELSE 0 END) as gastos,
+       SUM(CASE WHEN tipo = 'investimento' THEN valor ELSE 0 END) as investido
+     FROM transacoes ${fw.sql} GROUP BY mes ORDER BY mes`,
+    fw.params
+  );
+
+  let accSaldo = 0, accInvest = 0;
+  const evolucao = meses.map(r => {
+    accSaldo += (r.entradas || 0) - (r.gastos || 0);
+    accInvest += (r.investido || 0);
+    return {
+      mes: r.mes,
+      saldo: accSaldo,
+      investido: accInvest,
+      patrimonio: accSaldo + accInvest,
+    };
+  });
+
+  return { evolucao };
+}
+
+function tipoWhereFilter(tipo, inicio, fim, moeda) {
+  const clauses = ["tipo = ?"];
+  const params = [tipo];
+  if (inicio) { clauses.push("data >= ?"); params.push(inicio); }
+  if (fim) { clauses.push("data <= ?"); params.push(fim); }
+  if (moeda) { clauses.push("moeda = ?"); params.push(moeda); }
+  return { sql: 'WHERE ' + clauses.join(' AND '), params };
+}
+
+export function categoriasPorTipo({ inicio, fim, moeda } = {}) {
+  const gw = tipoWhereFilter('gasto', inicio, fim, moeda);
+  const rw = tipoWhereFilter('entrada', inicio, fim, moeda);
+
+  const gastos = typedExec(
+    `SELECT COALESCE(categoria, 'outros') as categoria, SUM(valor) as total
+     FROM transacoes ${gw.sql} GROUP BY categoria ORDER BY total DESC`,
+    gw.params
+  );
+
+  const receitas = typedExec(
+    `SELECT COALESCE(categoria, 'outros') as categoria, SUM(valor) as total
+     FROM transacoes ${rw.sql} GROUP BY categoria ORDER BY total DESC`,
+    rw.params
+  );
+
+  const totalGastos = gastos.reduce((a, r) => a + r.total, 0);
+  const totalReceitas = receitas.reduce((a, r) => a + r.total, 0);
+
+  return {
+    gastos: gastos.map(r => ({ ...r, percentual: totalGastos > 0 ? Math.round((r.total / totalGastos) * 100) : 0 })),
+    receitas: receitas.map(r => ({ ...r, percentual: totalReceitas > 0 ? Math.round((r.total / totalReceitas) * 100) : 0 })),
+    total_gastos: totalGastos,
+    total_receitas: totalReceitas,
   };
 }
