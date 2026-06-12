@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#7c5cfc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="/icons/icon-512.svg">
+  <title>Finance AI — Consultor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">$</div>
+        <div>
+          <div class="header-title">Finance AI</div>
+          <div class="header-sub">Consultor de Investimentos</div>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Upload</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+        <a href="/investimentos.html" class="nav-link">Investimentos</a>
+        <a href="/categorias.html" class="nav-link">Categorias</a>
+        <a href="/consultor.html" class="nav-link active">Consultor</a>
+      </nav>
+    </header>
+
+    <!-- Busca -->
+    <div class="period-filter" style="margin-bottom:20px">
+      <label for="searchTerm">Buscar</label>
+      <input type="text" id="searchTerm" placeholder="Ex: CDB, FII, IPCA, acoes..." style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:0.85rem;padding:8px 14px;max-width:400px">
+      <button class="btn btn-primary btn-sm" onclick="buscarConhecimento()" style="width:auto">Buscar</button>
+    </div>
+
+    <!-- Perfis -->
+    <section class="card" style="margin-bottom:20px">
+      <h3>Seu Perfil de Investidor</h3>
+      <div id="perfisGrid" class="goals-grid"></div>
+    </section>
+
+    <!-- Análise da Carteira -->
+    <section class="card" style="margin-bottom:20px">
+      <h3>Analise da Sua Carteira</h3>
+      <div id="analiseContainer">
+        <p class="loading">Carregando analise...</p>
+      </div>
+    </section>
+
+    <!-- Conhecimento -->
+    <div class="invest-tabs" style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="tab-btn active" data-tab="renda_fixa" onclick="switchTab('renda_fixa')">Renda Fixa</button>
+      <button class="tab-btn" data-tab="renda_variavel" onclick="switchTab('renda_variavel')">Renda Variavel</button>
+      <button class="tab-btn" data-tab="comparativos" onclick="switchTab('comparativos')">Comparativos</button>
+      <button class="tab-btn" data-tab="educacao" onclick="switchTab('educacao')">Educacao</button>
+      <button class="tab-btn" data-tab="glossario" onclick="switchTab('glossario')">Glossario</button>
+    </div>
+
+    <div id="conteudoContainer">
+      <p class="loading">Carregando conhecimento...</p>
+    </div>
+
+    <div id="buscaContainer" style="display:none"></div>
+  </div>
+
+  <script src="consultor.js"></script>
+</body>
+</html>

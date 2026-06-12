@@ -6,6 +6,7 @@ import { initDB, getDB } from './db.js';
 import { importCSV, gerarHash } from './importer.js';
 import { consolidar } from './engine/consolidator.js';
 import { calcularMetricas, calcularInvestimentos, patrimonioEvolucao, categoriasPorTipo } from './engine/metrics.js';
+import { consultar } from './engine/conhecimento.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -279,6 +280,114 @@ app.delete('/transacoes/:id', (req, res) => {
     res.json({ message: 'Transacao excluida', id });
   } catch (err) {
     console.error('Erro ao excluir transacao:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/consultor', (req, res) => {
+  try {
+    const { tipo, perfil, termo } = req.query;
+    const resultado = consultar({ tipo, perfil, termo });
+    res.json(resultado);
+  } catch (err) {
+    console.error('Erro no consultor:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/analise-carteira', (req, res) => {
+  try {
+    const db = getDB();
+    const { inicio, fim, moeda } = req.query;
+    const filtros = {};
+    if (inicio) filtros.inicio = inicio;
+    if (fim) filtros.fim = fim;
+    if (moeda) filtros.moeda = moeda;
+
+    const invest = calcularInvestimentos(filtros);
+    const totalInvestido = invest.total || 0;
+
+    const receitas = db.prepare(`
+      SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'entrada'
+    `).get().total;
+
+    const despesas = db.prepare(`
+      SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE tipo = 'gasto'
+    `).get().total;
+
+    const pctInvestido = receitas > 0 ? Math.round((totalInvestido / receitas) * 100) : 0;
+    const pctGastos = receitas > 0 ? Math.round((despesas / receitas) * 100) : 0;
+
+    const recomendacoes = [];
+
+    if (pctInvestido < 10) {
+      recomendacoes.push({
+        tipo: 'alerta',
+        mensagem: 'Voce investe menos de 10% da sua receita. A meta ideal e 20% ou mais. Considere aumentar gradualmente.',
+      });
+    } else if (pctInvestido < 20) {
+      recomendacoes.push({
+        tipo: 'melhoria',
+        mensagem: `Voce investe ${pctInvestido}% da sua receita. Bom caminho! Tente chegar a 20%+.`,
+      });
+    } else {
+      recomendacoes.push({
+        tipo: 'positivo',
+        mensagem: `Parabens! Voce investe ${pctInvestido}% da sua receita — acima da meta de 20%. Continue assim!`,
+      });
+    }
+
+    if (pctGastos > 80) {
+      recomendacoes.push({
+        tipo: 'alerta',
+        mensagem: `Seus gastos representam ${pctGastos}% da receita. Isso dificulta investir. Reveja despesas essenciais vs extras.`,
+      });
+    } else if (pctGastos > 60) {
+      recomendacoes.push({
+        tipo: 'melhoria',
+        mensagem: `Gastos de ${pctGastos}% da receita. Saudavel, mas reduzir para 50-60% libera mais para investir.`,
+      });
+    } else {
+      recomendacoes.push({
+        tipo: 'positivo',
+        mensagem: `Otimo controle! Gastos de apenas ${pctGastos}% da receita.`,
+      });
+    }
+
+    if ((despesas - totalInvestido) > receitas) {
+      recomendacoes.push({
+        tipo: 'alerta',
+        mensagem: 'Suas despesas + investimentos superam a receita. Voce esta usando reserva ou se endividando.',
+      });
+    }
+
+    const porTipo = invest.por_tipo || [];
+
+    if (porTipo.length === 0) {
+      recomendacoes.push({
+        tipo: 'dica',
+        mensagem: 'Comece com Tesouro Selic para reserva de emergencia e depois diversifique para CDB, LCI e FIIs.',
+      });
+    } else {
+      const temRendaVariavel = porTipo.some(t => ['acao', 'fii', 'etf', 'stock'].includes(t.tipo?.toLowerCase() || ''));
+      if (!temRendaVariavel && totalInvestido > 5000) {
+        recomendacoes.push({
+          tipo: 'dica',
+          mensagem: 'Para valores acima de R$ 5.000, considere diversificar para renda variavel (FIIs ou ETFs).',
+        });
+      }
+    }
+
+    res.json({
+      total_investido: totalInvestido,
+      receita_total: receitas,
+      despesa_total: despesas,
+      percentual_investido: pctInvestido,
+      percentual_gastos: pctGastos,
+      recomendacoes,
+    });
+  } catch (err) {
+    console.error('Erro na analise de carteira:', err);
     res.status(500).json({ error: err.message });
   }
 });
