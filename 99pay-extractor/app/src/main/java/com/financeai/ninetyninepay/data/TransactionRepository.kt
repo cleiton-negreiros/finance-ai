@@ -2,15 +2,22 @@ package com.financeai.ninetyninepay.data
 
 import android.graphics.Bitmap
 import com.financeai.ninetyninepay.extractor.OCREngine
-import com.financeai.ninetyninepay.extractor.TransactionParser
+import com.financeai.ninetyninepay.model.Bank
 import com.financeai.ninetyninepay.model.Transaction
+import com.financeai.ninetyninepay.parsers.ParserEngine
 
 class TransactionRepository(
-    private val ocrEngine: OCREngine,
-    private val parser: TransactionParser
+    private val ocrEngine: OCREngine
 ) {
     private val allTransactions = mutableListOf<Transaction>()
     private val seenHashes = mutableSetOf<String>()
+    private var currentBank: Bank = Bank.NOVENTA_NOVE_PAY
+
+    fun setBank(bank: Bank) {
+        currentBank = bank
+    }
+
+    fun getBank(): Bank = currentBank
 
     suspend fun processFrame(bitmap: Bitmap): ProcessResult {
         val ocrResult = ocrEngine.extractText(bitmap)
@@ -23,6 +30,7 @@ class TransactionRepository(
         }
 
         val rawText = ocrResult.getOrThrow()
+        val parser = ParserEngine.parserFor(currentBank)
         val parseResult = parser.parse(rawText)
 
         val newTransactions = parseResult.transactions
@@ -49,7 +57,7 @@ class TransactionRepository(
     fun count() = allTransactions.size
 
     data class ProcessResult(
-        val newTransactions: List<Transaction>,
+        val newTransactions: List<Transaction> = emptyList(),
         val totalTransactions: Int = 0,
         val error: String? = null
     )

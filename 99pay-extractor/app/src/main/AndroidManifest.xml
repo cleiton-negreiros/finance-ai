@@ -10,7 +10,7 @@
         android:maxSdkVersion="32" />
     <application
         android:allowBackup="true"
-        android:label="99Pay Extractor"
+        android:label="Finance AI Extractor"
         android:supportsRtl="true"
         android:theme="@style/Theme.NinetyNineExtractor"
         android:requestLegacyExternalStorage="true">

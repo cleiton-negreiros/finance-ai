@@ -1,21 +1,16 @@
-package com.financeai.ninetyninepay.extractor
+package com.financeai.ninetyninepay.parsers
 
+import com.financeai.ninetyninepay.model.Bank
 import com.financeai.ninetyninepay.model.Transaction
 
-class TransactionParser {
+class Parser99Pay : Parser {
 
     private val pattern = Regex(
         """([\s\S]*?)\s*\((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\)\s*\*\s*\*(.*?)\*:\s*([-+]?\s*R?\$?\s*[\d\.,]+)""",
         setOf(RegexOption.MULTILINE)
     )
 
-    data class ParseResult(
-        val transactions: List<Transaction>,
-        val rawLines: List<String>,
-        val errors: List<String>
-    )
-
-    fun parse(rawText: String): ParseResult {
+    override fun parse(rawText: String): Parser.ParseResult {
         val lines = rawText.lines()
             .map { it.trim() }
             .filter { it.isNotBlank() }
@@ -41,7 +36,7 @@ class TransactionParser {
                     val dedupKey = "${data}_${descricao}_${kotlin.math.abs(valor)}"
                     if (dedupKey !in seen) {
                         seen.add(dedupKey)
-                        transactions.add(Transaction(data, descricao, valor, tipo))
+                        transactions.add(Transaction(data, descricao, kotlin.math.abs(valor), tipo, Bank.NOVENTA_NOVE_PAY))
                     }
                 }
             } catch (e: Exception) {
@@ -51,28 +46,12 @@ class TransactionParser {
 
         transactions.sortBy { it.data }
 
-        return ParseResult(
-            transactions = transactions.distinctBy { "${it.data}_${it.descricao}_${it.valor}" },
+        val deduped = transactions.distinctBy { "${it.data}_${it.descricao}_${it.valor}" }
+
+        return Parser.ParseResult(
+            transactions = deduped,
             rawLines = lines,
             errors = errors
         )
     }
-
-    private fun normalizeDate(dateStr: String): String {
-        return dateStr
-    }
-
-    fun testParse(): ParseResult {
-        val testText = """*Lucro*: +R$1,20 (2026-06-06 04:52:18)
-*Pagamento com Pix enviado*: -R$1,50 (2026-06-05 16:02:26)
-*Lucro*: +R$1,20 (2026-06-05 05:15:38)
-*Pagamento com Pix enviado*: -R$7,00 (2026-06-04 22:02:27)
-*Lucro*: +R$1,21 (2026-06-04 04:43:50)
-*Pagamento com Pix enviado*: -R$15,00 (2026-06-03 19:59:45)
-*Lucro*: +R$1,21 (2026-06-03 06:05:10)"""
-        
-        return parse(testText)
-    }
-
-
 }

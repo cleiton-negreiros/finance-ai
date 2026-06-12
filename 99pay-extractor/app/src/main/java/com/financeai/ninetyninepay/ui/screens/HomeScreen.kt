@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import com.financeai.ninetyninepay.export.CSVExporter
 import com.financeai.ninetyninepay.extractor.OCREngine
 import com.financeai.ninetyninepay.extractor.ScreenCaptureService
-import com.financeai.ninetyninepay.extractor.TransactionParser
 import com.financeai.ninetyninepay.data.TransactionRepository
+import com.financeai.ninetyninepay.model.Bank
 import com.financeai.ninetyninepay.model.Transaction
 import com.financeai.ninetyninepay.ui.components.CaptureProgressCard
 import com.financeai.ninetyninepay.ui.components.TransactionRow
@@ -38,16 +38,17 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
     val scope = rememberCoroutineScope()
 
     val ocr = remember { OCREngine() }
-    val parser = remember { TransactionParser() }
-    val repo = remember { TransactionRepository(ocr, parser) }
+    val repo = remember { TransactionRepository(ocr) }
     val exporter = remember { CSVExporter() }
 
+    var selectedBank by remember { mutableStateOf(Bank.NOVENTA_NOVE_PAY) }
     var isCapturing by remember { mutableStateOf(false) }
     var frames by remember { mutableStateOf(0) }
     var found by remember { mutableStateOf(0) }
     var exported by remember { mutableStateOf(false) }
     var exportPath by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var bankExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         ScreenCaptureService.errorMessage.collect { msg ->
@@ -59,6 +60,7 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            repo.setBank(selectedBank)
             val intent = Intent(context, ScreenCaptureService::class.java).apply {
                 action = "START_CAPTURE"
                 putExtra("code", result.resultCode)
@@ -90,7 +92,7 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text("99Pay Extractor", fontWeight = FontWeight.Bold)
+                        Text("Finance AI Extractor", fontWeight = FontWeight.Bold)
                         Text("Extrato automatico", style = MaterialTheme.typography.labelSmall, color = Gray200)
                     }
                 },
@@ -105,6 +107,61 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(Modifier.height(8.dp))
+
+            // Bank selector
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Gray700)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Selecione o banco",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Gray200
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = bankExpanded,
+                        onExpandedChange = { if (!isCapturing) bankExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedBank.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bankExpanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Gray50,
+                                unfocusedTextColor = Gray50,
+                                focusedBorderColor = Purple,
+                                unfocusedBorderColor = Gray600,
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            enabled = !isCapturing
+                        )
+                        ExposedDropdownMenu(
+                            expanded = bankExpanded,
+                            onDismissRequest = { bankExpanded = false }
+                        ) {
+                            Bank.entries.forEach { bank ->
+                                DropdownMenuItem(
+                                    text = { Text(bank.displayName, color = Gray50) },
+                                    onClick = {
+                                        selectedBank = bank
+                                        bankExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(Modifier.height(16.dp))
 
             Card(
@@ -123,7 +180,7 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Abra o historico da 99Pay e toque em iniciar.\nO app captura a tela e extrai as transacoes automaticamente.",
+                        "Abra o historico do ${selectedBank.displayName} e toque em iniciar.\nO app captura a tela e extrai as transacoes automaticamente.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Gray200,
                         textAlign = TextAlign.Center
@@ -179,10 +236,11 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
 
             Spacer(Modifier.weight(1f))
 
-            // Buttons
             if (!isCapturing && found == 0) {
                 Button(
                     onClick = {
+                        repo.clear()
+                        repo.setBank(selectedBank)
                         val mgr = context.getSystemService(android.content.Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                         projectionLauncher.launch(mgr.createScreenCaptureIntent())
                     },
@@ -214,7 +272,7 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
                 Button(
                     onClick = {
                         scope.launch {
-                            val result = exporter.export(context, repo.getAll())
+                            val result = exporter.export(context, repo.getAll(), selectedBank)
                             if (result.isSuccess) {
                                 exportPath = result.getOrThrow().csvPath
                                 exported = true

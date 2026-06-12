@@ -1,7 +1,6 @@
 package com.financeai.ninetyninepay.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,18 +18,24 @@ fun TransactionRow(tx: Transaction) {
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = formatDate(tx.data),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Gray200,
-            modifier = Modifier.width(80.dp)
-        )
+        Column(modifier = Modifier.width(72.dp)) {
+            Text(
+                text = formatDate(tx.data),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Gray200,
+            )
+            Text(
+                text = tx.fonte.displayName,
+                style = MaterialTheme.typography.labelSmall,
+                color = Gray400,
+            )
+        }
         Text(
             text = tx.descricao,
             style = MaterialTheme.typography.bodyMedium,
             color = Gray50,
-            modifier = Modifier.weight(1f).padding(end = 12.dp),
-            maxLines = 1
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            maxLines = 2
         )
         Text(
             text = "${if (tx.tipo == Transaction.Tipo.SAIDA) "-" else "+"} R$ ${"%.2f".format(tx.valor)}",

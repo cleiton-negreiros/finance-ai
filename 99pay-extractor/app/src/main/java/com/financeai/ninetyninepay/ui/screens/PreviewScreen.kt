@@ -24,6 +24,7 @@ fun PreviewScreen(
 ) {
     val entradaSum = transactions.filter { it.tipo == Transaction.Tipo.ENTRADA }.sumOf { it.valor }
     val saidaSum = transactions.filter { it.tipo == Transaction.Tipo.SAIDA }.sumOf { it.valor }
+    val bancos = transactions.map { it.fonte.displayName }.distinct()
 
     Scaffold(
         topBar = {
@@ -72,13 +73,23 @@ fun PreviewScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            Text(
-                "${transactions.size} transacoes encontradas",
-                style = MaterialTheme.typography.titleMedium,
-                color = Gray50
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "${transactions.size} transacoes encontradas",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Gray50
+                )
+                Text(
+                    bancos.joinToString(", "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Gray200
+                )
+            }
 
             Spacer(Modifier.height(8.dp))
 
