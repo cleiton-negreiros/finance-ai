@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +40,7 @@ fun CaptureProgressCard(
         ) {
             if (isActive) {
                 LinearProgressIndicator(
-                    progress = animatedProgress,
+                    progress = { animatedProgress },
                     modifier = Modifier.fillMaxWidth().height(6.dp),
                     color = Purple,
                     trackColor = Gray600,

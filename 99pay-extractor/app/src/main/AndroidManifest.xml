@@ -8,13 +8,9 @@
         android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
         android:label="99Pay Extractor"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.NinetyNineExtractor"
         android:requestLegacyExternalStorage="true">

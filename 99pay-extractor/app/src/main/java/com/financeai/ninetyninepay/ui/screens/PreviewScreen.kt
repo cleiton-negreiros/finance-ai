@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +31,7 @@ fun PreviewScreen(
                 title = { Text("Resumo", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Voltar", tint = Gray50)
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Voltar", tint = Gray50)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Gray900)
@@ -59,7 +59,7 @@ fun PreviewScreen(
                         Text("${transactions.filter { it.tipo == Transaction.Tipo.ENTRADA }.size} transacoes",
                             style = MaterialTheme.typography.labelSmall, color = Gray200)
                     }
-                    Divider(
+                    HorizontalDivider(
                         modifier = Modifier.height(60.dp).width(1.dp),
                         color = Gray600
                     )
@@ -82,7 +82,7 @@ fun PreviewScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            Divider(color = Gray600)
+            HorizontalDivider(color = Gray600)
 
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(transactions) { tx -> TransactionRow(tx) }

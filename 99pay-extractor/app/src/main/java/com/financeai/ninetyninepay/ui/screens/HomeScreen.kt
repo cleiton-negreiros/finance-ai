@@ -49,6 +49,12 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
     var exportPath by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(Unit) {
+        ScreenCaptureService.errorMessage.collect { msg ->
+            if (msg != null) errorMsg = msg
+        }
+    }
+
     val projectionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -62,28 +68,20 @@ fun HomeScreen(onNavigateToPreview: (List<Transaction>) -> Unit) {
             isCapturing = true
 
             scope.launch {
-                ScreenCaptureService.onFrame = { bitmap ->
-                    scope.launch {
-                        val processResult = repo.processFrame(bitmap)
-                        frames = ScreenCaptureService.framesCaptured.value
-                        found = repo.count()
-                    }
+                ScreenCaptureService.frameFlow.collect { bitmap ->
+                    repo.processFrame(bitmap)
+                    frames = ScreenCaptureService.framesCaptured.value
+                    found = repo.count()
                 }
             }
         }
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
+    LaunchedEffect(isCapturing) {
+        while (isCapturing) {
             kotlinx.coroutines.delay(500)
-            if (isCapturing) {
-                frames = ScreenCaptureService.framesCaptured.value
-                found = repo.count()
-                val state = ScreenCaptureService.captureState.value
-                if (state == ScreenCaptureService.CaptureState.IDLE && isCapturing) {
-                    isCapturing = false
-                }
-            }
+            frames = ScreenCaptureService.framesCaptured.value
+            found = repo.count()
         }
     }
 

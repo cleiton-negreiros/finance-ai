@@ -12,11 +12,16 @@ import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class ScreenCaptureService : Service() {
 
@@ -30,10 +35,14 @@ class ScreenCaptureService : Service() {
         val framesCaptured = MutableStateFlow(0)
         val errorMessage = MutableStateFlow<String?>(null)
 
+        private val _frameFlow = MutableSharedFlow<Bitmap>(extraBufferCapacity = 1)
+        val frameFlow: SharedFlow<Bitmap> = _frameFlow.asSharedFlow()
+
         private var mediaProjection: MediaProjection? = null
         private var virtualDisplay: VirtualDisplay? = null
         private var imageReader: ImageReader? = null
         private var job: Job? = null
+        private var projectionCallback: MediaProjection.Callback? = null
     }
 
     enum class CaptureState { IDLE, CAPTURING, PROCESSING, DONE, ERROR }
@@ -45,15 +54,37 @@ class ScreenCaptureService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            "START_CAPTURE" -> {
-                val code = intent.getIntExtra("code", 0)
-                val data = intent.getParcelableExtra<Intent>("data")
-                val projectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                mediaProjection = projectionManager.getMediaProjection(code, data!!)
-                startCapturing()
+        try {
+            when (intent?.action) {
+                "START_CAPTURE" -> {
+                    val code = intent.getIntExtra("code", 0)
+                    val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra("data", Intent::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra("data")
+                    }
+                    if (data == null) {
+                        errorMessage.value = "Erro: dados de captura invalidos"
+                        return START_NOT_STICKY
+                    }
+                    val projectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                    val proj = projectionManager.getMediaProjection(code, data)
+                    proj.registerCallback(object : MediaProjection.Callback() {
+                        override fun onStop() {
+                            stopCapturing()
+                        }
+                    }, null)
+                    mediaProjection = proj
+                    startCapturing()
+                }
+                "STOP_CAPTURE" -> stopCapturing()
             }
-            "STOP_CAPTURE" -> stopCapturing()
+        } catch (e: Exception) {
+            errorMessage.value = e.message ?: "Erro desconhecido"
+            captureState.value = CaptureState.ERROR
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
         return START_STICKY
     }
@@ -68,26 +99,46 @@ class ScreenCaptureService : Service() {
         val height = metrics.heightPixels
         val density = metrics.densityDpi
 
-        imageReader = ImageReader.newInstance(width, height, android.graphics.PixelFormat.RGBA_8888, 2)
+        imageReader = ImageReader.newInstance(width, height, android.graphics.PixelFormat.RGBA_8888, 3)
+
+        imageReader?.setOnImageAvailableListener({ reader ->
+            val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
+            val bitmap = imageToBitmap(image)
+            image.close()
+            if (bitmap != null) {
+                _frameFlow.tryEmit(bitmap)
+                framesCaptured.value = framesCaptured.value + 1
+            }
+        }, null)
+
+        val surface = imageReader?.surface
+        if (surface == null) {
+            errorMessage.value = "Erro: surface do ImageReader nula"
+            return
+        }
 
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             "CaptureDisplay",
             width, height, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader?.surface, null, null
+            surface, null, null
         )
 
+        if (virtualDisplay == null) {
+            errorMessage.value = "Falha ao criar VirtualDisplay"
+            return
+        }
+
         job = CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            var frameCount = 0
+            delay(2000)
             while (isActive) {
                 val image = imageReader?.acquireLatestImage()
                 if (image != null) {
                     val bitmap = imageToBitmap(image)
                     image.close()
                     if (bitmap != null) {
-                        onFrame?.invoke(bitmap)
-                        frameCount++
-                        framesCaptured.value = frameCount
+                        _frameFlow.tryEmit(bitmap)
+                        framesCaptured.value = framesCaptured.value + 1
                     }
                 }
                 delay(CAPTURE_INTERVAL_MS)
@@ -97,29 +148,36 @@ class ScreenCaptureService : Service() {
 
     private fun stopCapturing() {
         job?.cancel()
+        imageReader?.setOnImageAvailableListener(null, null)
         virtualDisplay?.release()
         imageReader?.close()
+        projectionCallback?.let { mediaProjection?.unregisterCallback(it) }
         mediaProjection?.stop()
         virtualDisplay = null
         imageReader = null
         mediaProjection = null
+        projectionCallback = null
         captureState.value = CaptureState.IDLE
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    var onFrame: ((Bitmap) -> Unit)? = null
-
     private fun imageToBitmap(image: android.media.Image): Bitmap? {
         val planes = image.planes
+        if (planes.isEmpty()) return null
         val buffer = planes[0].buffer
-        val pixelStride = planes[0].pixelStride
         val rowStride = planes[0].rowStride
-        val rowPadding = rowStride - pixelStride * image.width
+        val width = image.width
+        val height = image.height
 
-        val bitmap = Bitmap.createBitmap(image.width + rowPadding / pixelStride, image.height, Bitmap.Config.ARGB_8888)
-        bitmap.copyPixelsFromBuffer(buffer)
-        return Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
+        val pixels = IntArray(width * height)
+        buffer.rewind()
+        for (row in 0 until height) {
+            buffer.position(row * rowStride)
+            val intBuffer = buffer.asIntBuffer()
+            intBuffer.get(pixels, row * width, width)
+        }
+        return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
     }
 
     private fun createNotificationChannel() {

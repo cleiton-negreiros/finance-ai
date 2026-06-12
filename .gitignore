@@ -11,3 +11,17 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+.vercel
+
+# Android / 99Pay Extractor
+99pay-extractor/.gradle/
+99pay-extractor/.idea/
+99pay-extractor/app/build/
+99pay-extractor/build/
+99pay-extractor/local.properties
+99pay-extractor/captures/
+*.apk
+*.aab
+*.ap_
+local.properties
