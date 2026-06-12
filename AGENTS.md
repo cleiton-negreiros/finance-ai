@@ -307,10 +307,14 @@ node backend/server.js
 - **Limpeza**: `backend/filters.js` removido (arquivo obsoleto que categorizava errado)
 - **Testado**: `/consultor`, `/analise-carteira`, `/categorias`, CRUD POST — todos OK
 - **Commit**: `docs: documentacao completa + sync termux + navegacao consultor`
+- **PWA**: manifest.json completo (ícones any+maskable, window-controls-overlay, categories), sw.js com cache-first assets + network-first API + fallback offline, registro sw adicionado ao consultor.html, ícones SVG com gradiente
+- **Responsivo**: Nav horizontal com scroll, 6 breakpoints (900/768/480/360px), safe-area-inset para notch, touch targets 44px, tables viram cards em <480px, modal com 100dvh
+- **Cores**: Background mais escuro (`#070b11`), acorde gradiente vibrante (`#8b6cff`), focus glow, scrollbar custom, `prefers-reduced-motion`
+- **Commit**: `feat: PWA+responsivo+cores — manifest completo, sw com cache offlines, css mobile-first, scroll suave, acentos vibrantes, touch targets`
 
 ### Next Steps (proxima sessão)
-1. Subir no Vercel (frontend com consultor.html já vai pegar automaticamente)
-2. Testar no celular: copiar repo, `./setup-termux.sh`, `node backend/server-termux.js`
+1. Subir no Vercel (frontend já vai pegar automaticamente — verificar se consultor.html aparece)
+2. Testar no celular: `git pull`, `./setup-termux.sh`, `node backend/server-termux.js`
 3. Verificar status do APK build no GitHub Actions
 4. Validar parsers MP/Rico/B3 com screenshots reais
 5. Feature: orçamentos mensais por categoria com alertas visuais
