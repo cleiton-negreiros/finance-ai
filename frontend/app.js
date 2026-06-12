@@ -31,6 +31,7 @@ function populatePeriods() {
     opt.textContent = label;
     sel.appendChild(opt);
   }
+  sel.value = now.toISOString().slice(0, 7);
 }
 
 function getPeriod() {
@@ -284,6 +285,20 @@ function renderKPIs(data) {
   setText('kpiEntradas', formatCurrency(data.total_entrada));
   setText('kpiSaidas', formatCurrency(data.total_saida));
   setText('kpiInvestido', formatCurrency(data.total_investido));
+
+  const poupanca = data.taxa_poupanca;
+  const el = document.getElementById('kpiPoupanca');
+  if (el) {
+    if (poupanca != null && !isNaN(poupanca)) {
+      el.textContent = (poupanca >= 0 ? '+' : '') + poupanca.toFixed(1) + '%';
+      el.style.color = poupanca >= 20 ? 'var(--green)' : poupanca >= 10 ? 'var(--accent)' : 'var(--red)';
+    } else {
+      el.textContent = 'N/A';
+    }
+  }
+
+  setText('subRendaReal', formatCurrency(data.renda_real));
+  setText('subMovimentacoes', formatCurrency(data.movimentacoes));
 }
 
 function renderContas(contas) {

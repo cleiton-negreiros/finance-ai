@@ -41,6 +41,8 @@ function seedContas() {
     { nome: 'Caixa', tipo: 'banco' },
     { nome: 'Itau', tipo: 'banco' },
     { nome: 'Inter', tipo: 'banco' },
+    { nome: 'Santander', tipo: 'banco' },
+    { nome: 'Sicoob Guid', tipo: 'banco' },
   ];
 
   const insert = db.prepare('INSERT OR IGNORE INTO contas (nome, tipo) VALUES (@nome, @tipo)');

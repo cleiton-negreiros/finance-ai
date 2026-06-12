@@ -71,13 +71,45 @@ export function calcularMetricas({ inicio, fim, moeda } = {}) {
     LIMIT 12
   `).all(...fw.params);
 
+  const rw = genericWhere(inicio, fim, moeda);
+  const entradas = db.prepare(`
+    SELECT descricao, categoria, valor FROM transacoes WHERE tipo = 'entrada' ${rw.joinSql}
+  `).all(...rw.params);
+
+  const { renda_real, movimentacoes } = classificarEntradas(entradas);
+  const totalEntrada = renda_real + movimentacoes;
+  const taxaPoupanca = totalEntrada > 0 ? ((totalEntrada - totalGastos - investido) / totalEntrada) * 100 : 0;
+
   return {
     custo_vida: custoVida,
     despesas_extras: despesasExtras,
     investido: investido,
     percentual_por_categoria: percentualPorCategoria,
     fluxo_mensal: fluxoMensal,
+    renda_real: renda_real,
+    movimentacoes: movimentacoes,
+    taxa_poupanca: Math.round(taxaPoupanca * 100) / 100,
   };
+}
+
+const PALAVRAS_RENDA = /\b(salari[oa]|rendimento|holerite|decimo|13[°o]|bonus|comissao|freela|pro.labore|pj|ferias|rescisao|venda|teclado|evento|aluguel.recebido|dividendo|juros.sobre)\b/i;
+const PALAVRAS_MOVIMENTACAO = /\b(resgate|saque|reembolso|transferencia|pix\s.*recebido|cofrinho|conta.capital|aplicacao)\b/i;
+
+function classificarEntradas(entradas) {
+  let renda = 0, mov = 0;
+  for (const e of entradas) {
+    const d = (e.descricao || '') + ' ' + (e.categoria || '');
+    if (PALAVRAS_MOVIMENTACAO.test(d) && !PALAVRAS_RENDA.test(d)) {
+      mov += e.valor;
+    } else if (PALAVRAS_RENDA.test(d) || e.categoria === 'salario' || e.categoria === 'rendimentos') {
+      renda += e.valor;
+    } else if (e.categoria === 'resgate' || e.categoria === 'saque' || e.categoria === 'transferencia') {
+      mov += e.valor;
+    } else {
+      renda += e.valor;
+    }
+  }
+  return { renda_real: renda, movimentacoes: mov };
 }
 
 export function calcularInvestimentos({ inicio, fim, moeda } = {}) {

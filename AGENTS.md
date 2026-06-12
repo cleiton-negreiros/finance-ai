@@ -312,14 +312,36 @@ node backend/server.js
 - **Cores**: Background mais escuro (`#070b11`), acorde gradiente vibrante (`#8b6cff`), focus glow, scrollbar custom, `prefers-reduced-motion`
 - **Commit**: `feat: PWA+responsivo+cores — manifest completo, sw com cache offlines, css mobile-first, scroll suave, acentos vibrantes, touch targets`
 
-### Next Steps (proxima sessão)
-1. Subir no Vercel (frontend já vai pegar automaticamente — verificar se consultor.html aparece)
-2. Testar no celular: `git pull`, `./setup-termux.sh`, `node backend/server-termux.js`
-3. Verificar status do APK build no GitHub Actions
-4. Validar parsers MP/Rico/B3 com screenshots reais
-5. Feature: orçamentos mensais por categoria com alertas visuais
-6. Feature: busca/filtro avançado nas transações (texto, tipo, categoria)
-7. Feature: exportar CSV do frontend (download filtrado)
+## Session Log (2026-06-12)
+
+### Done this session
+- **Importação da planilha**: Script `backend/import-planilha.js` — parser que lê o CSV exportado do Google Sheets (estrutura multi-conta) e importa 105 transações no banco
+- **Lógica da planilha**: Col D/C6 (valor), col U (tracking universal), deltas por conta nas colunas H(99Pay)/J(MP)/L(Rico)/N(Sicoob)/P(Em dinheiro), col T(SLD REAL)
+- **Tratamento de sinais**: valor > 0 → entrada, valor < 0 → gasto/investimento (respeita direção real do dinheiro)
+- **Validação**: Conferido TODAS as categorias contra o resumo da planilha — 100% match
+  - Gastos: R$ 10.591,45 (planilha: 10.591,43 — dif 0,02 arredondamento)
+  - Investimentos: R$ 1.488,04 (exato)
+  - Rendimentos: R$ 25,35 (exato)
+- **Contas novas**: Santander e Sicoob Guid adicionadas ao seed de contas
+- **Contas não usadas ignoradas**: Em dinheiro (col S) desconsiderada conforme orientação
+- **Server:** Rodando em http://localhost:3000 com dashboard funcional
+- **Auditoria financeira**: Análise completa dos 127 registros — identificado que salário não está sendo capturado (faltam ~R$ 45k em 10 meses)
+- **Dashboard aprimorado**: Novos campos `renda_real`, `movimentacoes`, `taxa_poupanca` no endpoint /dashboard; frontend mostra KPI de poupança + sub-renda (real vs movimentação)
+- **Default período atual**: Period filter agora inicia no mês corrente (não "Tudo")
+- **Categorizer reformulado**: Corrigidos 15+ regex (Aluguel, Mercado Pago, acentos, café, doces, gas/gás, etc.), adicionadas novas categorias (cb, doacoes, casa, carro)
+- **Recategorização**: 5 transações existentes recategorizadas (Aluguel→moradia, CB→cb, Doces→alimentacao, Streaming→streaming)
+- **CSS**: kpi-grid adaptado para 4 cards responsivos
+- **Server:** Rodando em http://localhost:3000
+
+### Next Steps
+1. **Importar salário** — adicionar entradas de salário dos últimos meses para corrigir saldo e fluxo
+2. Subir no Vercel (verificar frontend)
+3. Testar no celular (Termux)
+4. Verificar APK build status
+5. Feature: orçamentos mensais com alertas
+6. Feature: busca/filtro avançado
+7. Feature: export CSV
+8. Importar planilha de investimentos pendente
 
 ## Known Limitations & TODOs
 
