@@ -29,12 +29,12 @@ finance-ai/
 │   ├── db.js / db-termux.js   # Database init (better-sqlite3 / sql.js)
 │   ├── importer.js / importer-termux.js  # CSV import
 │   ├── categorizer.js         # Keyword → category rules
-│   ├── filters.js
 │   ├── normalizers/           # CSV normalizers per bank
 │   │   ├── 99pay.js / c6.js / mercadopago.js / binance.js / rico.js / nomad.js
 │   └── engine/
-│       ├── consolidator.js    # Account balances, totals, por_moeda[]
-│       └── metrics.js         # Goals, fluxo, categories, investimentos, patrimonio
+│       ├── consolidator.js / consolidator-termux.js   # Account balances, totals, por_moeda[]
+│       ├── metrics.js / metrics-termux.js             # Goals, fluxo, categories, investimentos, patrimonio, evolucao
+│       └── conhecimento.js                            # Investment knowledge base (consultor)
 ├── frontend/
 │   ├── index.html             # Upload page (CSV import + CRUD modal)
 │   ├── dashboard.html         # Dashboard (KPIs, categories, goals, fluxo)
@@ -45,7 +45,12 @@ finance-ai/
 │   ├── charts.js              # Dashboard charts
 │   ├── invest-charts.js       # Patrimony evolution line chart
 │   ├── cat-charts.js          # Category bar charts
+│   ├── consultor.html         # Investment consultant page
+│   ├── consultor.js           # Consultant UI logic
 │   └── sw.js                  # Service Worker (PWA)
+├── docs/
+│   ├── guia-completo.md       # Complete user guide
+│   └── API.md                 # API reference
 ├── 99pay-extractor/           # Android app (Kotlin)
 │   ├── app/src/main/java/com/financeai/ninetyninepay/
 │   │   ├── model/
@@ -279,16 +284,38 @@ cd backend && node server-termux.js
 # Backend syntax check
 node --check backend/server.js
 node --check backend/engine/metrics.js
-
-# API smoke test
-node -e "import('./backend/server.js')"
+node --check backend/engine/conhecimento.js
 
 # Start server
 node backend/server.js
-# Test: curl http://localhost:3000/categorias
+# Test endpoints:
+#   curl http://localhost:3000/categorias
+#   curl http://localhost:3000/investimentos
+#   curl http://localhost:3000/consultor
+#   curl http://localhost:3000/analise-carteira
 ```
 
 ---
+
+## Session Log (2026-06-11)
+
+### Done this session
+- **Consultor de investimentos**: Base de conhecimento (renda fixa, variável, perfis, comparativos, educação, glossário), endpoint `/consultor` com busca textual, endpoint `/analise-carteira` com recomendações personalizadas baseadas em dados reais
+- **Documentação**: `docs/guia-completo.md` (guia completo do sistema), `docs/API.md` (referência de todos os endpoints)
+- **Termux sincronizado**: `server-termux.js`, `metrics-termux.js`, `consolidator-termux.js`, `importer-termux.js` — todos atualizados com os mesmos recursos do desktop (CRUD, investimentos, categorias, consultor, filtro período/moeda)
+- **Navegação**: Consultor adicionado ao nav de todas as páginas
+- **Limpeza**: `backend/filters.js` removido (arquivo obsoleto que categorizava errado)
+- **Testado**: `/consultor`, `/analise-carteira`, `/categorias`, CRUD POST — todos OK
+- **Commit**: `docs: documentacao completa + sync termux + navegacao consultor`
+
+### Next Steps (proxima sessão)
+1. Subir no Vercel (frontend com consultor.html já vai pegar automaticamente)
+2. Testar no celular: copiar repo, `./setup-termux.sh`, `node backend/server-termux.js`
+3. Verificar status do APK build no GitHub Actions
+4. Validar parsers MP/Rico/B3 com screenshots reais
+5. Feature: orçamentos mensais por categoria com alertas visuais
+6. Feature: busca/filtro avançado nas transações (texto, tipo, categoria)
+7. Feature: exportar CSV do frontend (download filtrado)
 
 ## Known Limitations & TODOs
 
@@ -299,3 +326,4 @@ node backend/server.js
 - [ ] **Multi-user**: Not needed (personal finance)
 - [ ] **APK build**: Requires JDK locally for testing; rely on GitHub Actions
 - [ ] **Parser validation**: Mercado Pago, Rico, B3 parsers need real screen testing
+- [ ] **Termux mobile test**: Verify all endpoints on Android browser
